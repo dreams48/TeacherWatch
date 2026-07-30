@@ -1,0 +1,29 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Enseignants (<%= filtre === 'actif' ? 'actifs' : 'archivés' %>)</h1>
+<p><a href="/enseignants?statut=actif">Actifs</a> · <a href="/enseignants?statut=archive">Archivés</a>
+   · <a href="/imports/personnel">Importer le personnel</a></p>
+<div class="carte defiler"><table>
+  <tr><th>Id</th><th>Matricule</th><th>Nom</th><th>Spécialité</th><th>Téléphone</th><th>Situation administrative</th></tr>
+  <% for (const e of enseignants) { %>
+    <tr><td><%= e.id %></td><td><%= e.matricule || '—' %></td><td><%= e.nom %></td>
+        <td><%= e.specialite || '—' %></td><td><%= e.telephone || '—' %></td>
+        <td>
+          <form method="post" action="/enseignants/<%= e.id %>/situation" class="ligne-form" style="gap:.3rem;">
+            <select name="situation" style="max-width:11rem;">
+              <% for (const s of ['en_poste','mission','conge_maladie','conge_maternite','formation','detache']) { %>
+                <option value="<%= s %>" <%= e.situation === s ? 'selected' : '' %>><%= s.replace(/_/g, ' ') %></option>
+              <% } %>
+            </select>
+            <input type="date" name="debut" value="<%= e.situation_debut || '' %>" style="max-width:9.5rem;" title="Début">
+            <input type="date" name="fin" value="<%= e.situation_fin || '' %>" style="max-width:9.5rem;" title="Fin">
+            <button class="petit secondaire">OK</button>
+          </form>
+          <% if (e.situation !== 'en_poste') { %><span class="pastille p-info">couvert : pas de saisie attendue sur la période</span><% } %>
+        </td></tr>
+  <% } %>
+</table>
+<p class="note">Un enseignant en situation couverte (mission, congé…) n'est pas proposé à la saisie
+   et n'apparaît pas au rapport d'absence sur la période déclarée. Les archivés ne sont jamais supprimés :
+   l'historique des rapports est conservé.</p>
+</div>
+<%- include('partials/pied') %>

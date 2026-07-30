@@ -1,0 +1,85 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Paramètres</h1>
+<% if (message) { %><div class="bandeau b-info"><%= message %></div><% } %>
+
+<h2>Secteurs</h2>
+<div class="carte defiler"><table>
+  <tr><th>Nom</th><th>Statut</th><th></th></tr>
+  <% for (const s of secteurs) { %>
+    <tr><td>
+      <form class="enligne" method="post" action="/admin/secteurs/<%= s.id %>">
+        <input name="nom" value="<%= s.nom %>" style="max-width:14rem;">
+        <input type="hidden" name="actif" value="<%= s.actif %>">
+        <button class="petit secondaire">Renommer</button>
+      </form></td>
+      <td><%= s.actif ? 'actif' : 'désactivé' %></td>
+      <td><form class="enligne" method="post" action="/admin/secteurs/<%= s.id %>">
+        <input type="hidden" name="nom" value="<%= s.nom %>">
+        <input type="hidden" name="actif" value="<%= s.actif ? 0 : 1 %>">
+        <button class="petit secondaire"><%= s.actif ? 'Désactiver' : 'Réactiver' %></button>
+      </form></td></tr>
+  <% } %>
+</table></div>
+
+<h2>Tranches horaires (10 tranches officielles)</h2>
+<div class="carte defiler">
+  <p class="note">Horaires provisoires à confirmer par le lycée. La modification ne change pas les
+     événements passés (instantanés).</p>
+  <table>
+  <tr><th>N°</th><th>Début</th><th>Fin</th><th>Durée</th><th></th></tr>
+  <% for (const t of tranches) { %>
+    <tr><td>T<%= t.numero %></td>
+      <form method="post" action="/admin/tranches/<%= t.id %>">
+        <td><input name="heure_debut" value="<%= t.heure_debut %>" pattern="\d{2}:\d{2}" style="max-width:6rem;"></td>
+        <td><input name="heure_fin" value="<%= t.heure_fin %>" pattern="\d{2}:\d{2}" style="max-width:6rem;"></td>
+        <td><%= t.duree_minutes %> min</td>
+        <td><button class="petit secondaire">Enregistrer</button></td>
+      </form></tr>
+  <% } %>
+</table></div>
+
+<h2>Règles et envois</h2>
+<div class="carte">
+  <form method="post" action="/admin/reglages">
+    <label>Jours de cours de la semaine (1=lundi … 6=samedi, séparés par des virgules)</label>
+    <input name="jours_cours" value="<%= reglages.jours_cours %>">
+    <label style="font-weight:400;"><input type="checkbox" name="compte_retard_heures" value="1"
+      <%= reglages.compte_retard_heures === '1' ? 'checked' : '' %>> Compter les retards dans les heures d'absence (règle à valider par le proviseur)</label>
+    <label style="font-weight:400;"><input type="checkbox" name="compte_depart_heures" value="1"
+      <%= reglages.compte_depart_heures === '1' ? 'checked' : '' %>> Compter les départs anticipés dans les heures d'absence</label>
+    <label>Envoi du rapport au proviseur</label>
+    <select name="envoi_mode">
+      <option value="consolide" <%= reglages.envoi_mode === 'consolide' ? 'selected' : '' %>>Consolidé (notification à chaque soumission, e-mail à la demande)</option>
+      <option value="chaque_soumission" <%= reglages.envoi_mode === 'chaque_soumission' ? 'selected' : '' %>>À chaque soumission</option>
+    </select>
+    <p><button type="submit">Enregistrer les réglages</button></p>
+  </form>
+</div>
+
+<h2>Calendrier — exceptions (fériés, congés, journées banalisées)</h2>
+<div class="carte">
+  <form method="post" action="/admin/calendrier" class="ligne-form">
+    <div><label>Date</label><input type="date" name="date_jour" required></div>
+    <div><label>Type</label>
+      <select name="est_jour_cours">
+        <option value="0">Pas de cours (férié / congé)</option>
+        <option value="1">Jour de cours exceptionnel</option>
+      </select></div>
+    <div><label>Motif</label><input name="motif" placeholder="ex. Fête nationale"></div>
+    <div><button type="submit">Ajouter</button></div>
+  </form>
+  <% if (exceptions.length) { %>
+  <table style="margin-top:1rem;">
+    <tr><th>Date</th><th>Type</th><th>Motif</th><th></th></tr>
+    <% for (const e of exceptions) { %>
+      <tr><td><%= e.date_jour %></td>
+          <td><%= e.est_jour_cours ? 'Jour de cours exceptionnel' : 'Pas de cours' %></td>
+          <td><%= e.motif || '—' %></td>
+          <td><form method="post" action="/admin/calendrier/<%= e.date_jour %>/supprimer">
+              <button class="petit danger">Retirer</button></form></td></tr>
+    <% } %>
+  </table>
+  <% } %>
+  <p class="note">Les rappels de 16 h et le verrouillage de 18 h ne s'exécutent que les jours de cours.</p>
+</div>
+<%- include('partials/pied') %>

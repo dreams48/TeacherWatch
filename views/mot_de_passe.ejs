@@ -1,0 +1,19 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Changement de mot de passe</h1>
+<div class="carte" style="max-width: 28rem;">
+  <% if (user.doit_changer_mdp) { %>
+    <div class="bandeau b-info">Première connexion : vous devez choisir un nouveau mot de passe.</div>
+  <% } %>
+  <% if (erreur) { %><div class="bandeau b-erreur"><%= erreur %></div><% } %>
+  <form method="post" action="/mot-de-passe">
+    <label>Mot de passe actuel</label>
+    <input name="actuel" type="password" required autocomplete="current-password">
+    <label>Nouveau mot de passe (10 caractères minimum)</label>
+    <input name="nouveau" type="password" required minlength="10" autocomplete="new-password">
+    <label>Confirmation</label>
+    <input name="confirmation" type="password" required minlength="10" autocomplete="new-password">
+    <p><button type="submit">Enregistrer</button></p>
+  </form>
+  <p class="note">Le changement révoque vos autres sessions ouvertes.</p>
+</div>
+<%- include('partials/pied') %>

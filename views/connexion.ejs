@@ -1,0 +1,18 @@
+<%- include('partials/entete', { user: null }) %>
+<h1>Connexion</h1>
+<div class="carte" style="max-width: 28rem;">
+  <% if (erreur) { %><div class="bandeau b-erreur"><%= erreur %></div><% } %>
+  <form method="post" action="/connexion">
+    <label for="email">Adresse e-mail</label>
+    <input id="email" name="email" type="email" required autocomplete="username">
+    <label for="mdp">Mot de passe</label>
+    <input id="mdp" name="mdp" type="password" required autocomplete="current-password">
+    <p><button type="submit">Se connecter</button></p>
+  </form>
+  <% if (googleActif) { %>
+    <p><a class="bouton secondaire" href="/auth/google">Continuer avec Google</a></p>
+  <% } %>
+  <p class="note">Seuls les comptes créés par la direction du lycée peuvent accéder à TeacherWatch.
+     En cas d'oubli de mot de passe, adressez-vous au proviseur ou à un administrateur.</p>
+</div>
+<%- include('partials/pied') %>

@@ -1,0 +1,17 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Journal d'audit</h1>
+<p class="note">Journal en ajout seul : aucune entrée ne peut être modifiée ni supprimée, y compris par le proviseur.</p>
+<div class="carte defiler"><table>
+  <tr><th>Horodatage (UTC)</th><th>Auteur</th><th>Rôle</th><th>Action</th><th>Objet</th><th>Avant</th><th>Après</th><th>Motif</th></tr>
+  <% for (const l of lignes) { %>
+    <tr><td><%= l.ts %></td><td><%= l.auteur || 'système' %></td><td><%= l.role || '—' %></td>
+        <td><%= l.action %></td><td><%= l.objet_type || '' %> <%= l.objet_id || '' %></td>
+        <td class="note"><%= l.avant || '' %></td><td class="note"><%= l.apres || '' %></td>
+        <td><%= l.motif || '' %></td></tr>
+  <% } %>
+</table></div>
+<p>
+  <% if (page > 1) { %><a class="bouton secondaire" href="/admin/audit?page=<%= page - 1 %>">← Plus récent</a><% } %>
+  <% if (lignes.length === 50) { %><a class="bouton secondaire" href="/admin/audit?page=<%= page + 1 %>">Plus ancien →</a><% } %>
+</p>
+<%- include('partials/pied') %>

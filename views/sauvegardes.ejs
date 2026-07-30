@@ -1,0 +1,29 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Sauvegardes &amp; envois</h1>
+
+<h2>Sauvegardes de la base</h2>
+<div class="carte">
+  <p class="note">Sauvegarde automatique chaque nuit à 2 h (heure du Cameroun), rétention 30 jours.
+     Téléchargez régulièrement une copie et conservez-la hors du serveur.</p>
+  <form method="post" action="/admin/sauvegardes/maintenant"><button>Sauvegarder maintenant</button></form>
+  <table style="margin-top:1rem;">
+    <tr><th>Fichier</th><th>Taille</th><th></th></tr>
+    <% for (const f of fichiers) { %>
+      <tr><td><%= f.nom %></td><td><%= Math.round(f.taille / 1024) %> Ko</td>
+          <td><a class="bouton secondaire" href="/admin/sauvegardes/<%= f.nom %>">Télécharger</a></td></tr>
+    <% } %>
+    <% if (!fichiers.length) { %><tr><td colspan="3" class="note">Aucune sauvegarde pour l'instant.</td></tr><% } %>
+  </table>
+</div>
+
+<h2>Traçabilité des exports et envois</h2>
+<div class="carte defiler"><table>
+  <tr><th>Date (UTC)</th><th>Destinataire</th><th>Sujet</th><th>Période</th><th>Format</th><th>Lignes</th><th>Résultat</th><th>Empreinte SHA-256</th></tr>
+  <% for (const e of envois) { %>
+    <tr><td><%= e.created_at %></td><td><%= e.destinataire %></td><td><%= e.sujet %></td>
+        <td><%= e.periode || '—' %></td><td><%= e.format || '—' %></td><td><%= e.nb_lignes ?? '—' %></td>
+        <td><span class="pastille <%= e.resultat === 'succes' ? 'p-ok' : e.resultat === 'non_configure' ? 'p-neutre' : 'p-erreur' %>"><%= e.resultat %></span></td>
+        <td class="note"><%= e.empreinte ? e.empreinte.slice(0, 16) + '…' : '—' %></td></tr>
+  <% } %>
+</table></div>
+<%- include('partials/pied') %>

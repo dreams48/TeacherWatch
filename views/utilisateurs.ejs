@@ -1,0 +1,69 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Utilisateurs</h1>
+<% if (message) { %><div class="bandeau b-info"><%= message %></div><% } %>
+
+<h2>Créer un compte</h2>
+<div class="carte">
+  <form method="post" action="/admin/utilisateurs" class="ligne-form">
+    <div><label>Nom</label><input name="nom" required></div>
+    <div><label>Adresse e-mail (Gmail conseillé)</label><input name="email" type="email" required></div>
+    <div><label>Rôle</label>
+      <select name="role">
+        <option value="surveillant">Surveillant</option>
+        <% if (user.role === 'proviseur') { %><option value="admin">Administrateur</option><% } %>
+      </select></div>
+    <div><label>Secteur (surveillant)</label>
+      <select name="secteur_id"><option value="">—</option>
+        <% for (const s of secteurs) { %><option value="<%= s.id %>"><%= s.nom %></option><% } %>
+      </select></div>
+    <div><button type="submit">Créer et inviter</button></div>
+  </form>
+  <p class="note">Le compte est créé à l'état « invité » avec un mot de passe initial ; il devient « actif »
+     à la première connexion réussie (le proviseur en est notifié).</p>
+</div>
+
+<h2>Comptes</h2>
+<div class="carte defiler"><table>
+  <tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Secteur</th><th>Statut</th><th>Actions</th></tr>
+  <% for (const u of utilisateurs) { %>
+    <tr>
+      <td><%= u.nom %><%= u.est_compte_principal ? ' 🛡️' : '' %></td>
+      <td><%= u.email %></td><td><%= u.role %></td><td><%= u.secteur || '—' %></td>
+      <td><span class="pastille <%= u.statut === 'actif' ? 'p-ok' : u.statut === 'invite' ? 'p-info' : 'p-neutre' %>"><%= u.statut %></span></td>
+      <td>
+        <% if (u.est_compte_principal) { %>
+          <span class="note">Compte protégé : ne peut pas être désactivé.</span>
+        <% } else { %>
+          <form class="enligne" method="post" action="/admin/utilisateurs/<%= u.id %>/statut">
+            <select name="statut" style="max-width:8rem;">
+              <option value="actif" <%= u.statut === 'actif' ? 'selected' : '' %>>actif</option>
+              <option value="suspendu" <%= u.statut === 'suspendu' ? 'selected' : '' %>>suspendu</option>
+              <option value="archive" <%= u.statut === 'archive' ? 'selected' : '' %>>archivé</option>
+            </select>
+            <button class="petit secondaire">Changer</button>
+          </form>
+          <form class="enligne" method="post" action="/admin/utilisateurs/<%= u.id %>/reinitialiser-mdp">
+            <button class="petit secondaire">Réinit. mdp</button></form>
+        <% } %>
+        <form class="enligne" method="post" action="/admin/utilisateurs/<%= u.id %>/revoquer-sessions">
+          <button class="petit secondaire">Révoquer sessions</button></form>
+      </td>
+    </tr>
+  <% } %>
+</table></div>
+
+<% if (user.role === 'proviseur' && user.est_compte_principal) { %>
+<h2>Transfert du compte principal (successeur)</h2>
+<div class="carte">
+  <form method="post" action="/admin/transfert-compte-principal" class="ligne-form"
+        onsubmit="return confirm('Transférer définitivement le compte principal ? Vos sessions seront révoquées.');">
+    <div><label>Nom du successeur</label><input name="nom" required></div>
+    <div><label>E-mail du successeur</label><input name="email" type="email" required></div>
+    <div><label>Votre mot de passe actuel</label><input name="mdp" type="password" required></div>
+    <div><label>Motif</label><input name="motif" placeholder="ex. mutation"></div>
+    <div><button type="submit" class="danger">Transférer</button></div>
+  </form>
+  <p class="note">Seul le proviseur peut transférer le compte principal. L'opération est tracée dans le journal d'audit.</p>
+</div>
+<% } %>
+<%- include('partials/pied') %>

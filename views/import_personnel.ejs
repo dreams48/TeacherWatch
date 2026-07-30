@@ -1,0 +1,66 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Import du personnel</h1>
+<% if (erreur) { %><div class="bandeau b-erreur"><%= erreur %></div><% } %>
+
+<% if (!apercu) { %>
+<div class="carte">
+  <p>Fichier Excel (.xlsx) ou CSV. Colonnes reconnues : <strong>Matricule</strong>, <strong>Nom</strong>,
+     <strong>Spécialité</strong>, <strong>Téléphone</strong> (au minimum : Nom).</p>
+  <form method="post" action="/imports/personnel" enctype="multipart/form-data">
+    <input type="file" name="fichier" accept=".xlsx,.xls,.csv" required>
+    <p><button type="submit">Analyser (aperçu avant publication)</button></p>
+  </form>
+  <p class="note">L'analyse ne modifie rien : la publication est une étape séparée et atomique.
+     Les enseignants absents du nouveau fichier sont archivés, jamais supprimés.</p>
+</div>
+<% if (historique.length) { %>
+<h2>Imports précédents</h2>
+<div class="carte defiler"><table>
+  <tr><th>Date (UTC)</th><th>Fichier</th><th>Statut</th><th>Auteur</th><th>Résultat</th></tr>
+  <% for (const h of historique) { %>
+    <tr><td><%= h.created_at %></td><td><%= h.fichier %></td><td><%= h.statut %></td>
+        <td><%= h.auteur %></td><td><%= h.stats || '—' %></td></tr>
+  <% } %>
+</table></div>
+<% } %>
+
+<% } else { %>
+<h2>Aperçu — <%= apercu.fichier %> (<%= apercu.donnees.length %> ligne(s) exploitables)</h2>
+<% const bloquants = apercu.anomalies.filter(a => a.niveau === 'bloquant');
+   const confirmations = apercu.anomalies.filter(a => a.niveau === 'confirmation');
+   const avertissements = apercu.anomalies.filter(a => a.niveau === 'avertissement'); %>
+<% if (bloquants.length) { %>
+  <div class="bandeau b-erreur">⛔ <%= bloquants.length %> anomalie(s) bloquante(s) : la publication est impossible. Corrigez le fichier puis téléversez-le de nouveau.</div>
+<% } %>
+<% if (apercu.anomalies.length) { %>
+<div class="carte defiler"><table>
+  <tr><th>Ligne</th><th>Niveau</th><th>Anomalie</th></tr>
+  <% for (const a of apercu.anomalies) { %>
+    <tr><td><%= a.ligne || '—' %></td>
+        <td><span class="pastille <%= a.niveau === 'bloquant' ? 'p-erreur' : a.niveau === 'confirmation' ? 'p-attente' : 'p-info' %>"><%= a.niveau %></span></td>
+        <td><%= a.message %></td></tr>
+  <% } %>
+</table></div>
+<% } %>
+<div class="carte defiler"><table>
+  <tr><th>Matricule</th><th>Nom</th><th>Spécialité</th><th>Téléphone</th></tr>
+  <% for (const d of apercu.donnees.slice(0, 200)) { %>
+    <tr><td><%= d.matricule || '—' %></td><td><%= d.nom %></td><td><%= d.specialite || '—' %></td><td><%= d.telephone || '—' %></td></tr>
+  <% } %>
+</table>
+<% if (apercu.donnees.length > 200) { %><p class="note">… et <%= apercu.donnees.length - 200 %> autres lignes.</p><% } %>
+</div>
+<% if (apercu.statut === 'apercu' && !bloquants.length) { %>
+<div class="carte">
+  <form method="post" action="/imports/personnel/<%= apercu.id %>/publier">
+    <% if (confirmations.length) { %>
+      <label style="font-weight:400;"><input type="checkbox" name="confirmer_massif" value="1" required>
+        Je confirme la modification massive signalée ci-dessus.</label>
+    <% } %>
+    <p><button type="submit">Publier l'import (atomique)</button>
+       <a class="bouton secondaire" href="/imports/personnel">Annuler</a></p>
+  </form>
+</div>
+<% } %>
+<% } %>
+<%- include('partials/pied') %>

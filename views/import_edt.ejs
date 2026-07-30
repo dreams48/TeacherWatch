@@ -1,0 +1,71 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Import de l'emploi du temps</h1>
+<% if (erreur) { %><div class="bandeau b-erreur"><%= erreur %></div><% } %>
+
+<% if (!apercu) { %>
+<div class="carte">
+  <p>Fichier Excel (.xlsx) ou CSV — une ligne par cours. Colonnes reconnues :
+     <strong>Jour</strong> (lundi…samedi ou 1…6), <strong>Tranche</strong> (1 à 10),
+     <strong>Classe</strong>, <strong>Secteur</strong>, <strong>Matricule</strong> (ou <strong>Enseignant</strong>),
+     <strong>Matière</strong>, <strong>Jumelage</strong> (facultatif : même code pour les classes jumelées d'un même cours).</p>
+  <form method="post" action="/imports/edt" enctype="multipart/form-data">
+    <input type="file" name="fichier" accept=".xlsx,.xls,.csv" required>
+    <p><button type="submit">Analyser (aperçu avant publication)</button></p>
+  </form>
+  <p class="note">Importez d'abord le personnel : chaque ligne doit être rapprochée d'un enseignant connu.</p>
+</div>
+<% if (versions.length) { %>
+<h2>Versions</h2>
+<div class="carte defiler"><table>
+  <tr><th>N°</th><th>Libellé</th><th>Date d'effet</th><th>Statut</th><th></th></tr>
+  <% for (const v of versions) { %>
+    <tr><td><%= v.id %></td><td><%= v.libelle || '—' %></td><td><%= v.date_effet %></td>
+        <td><%= v.actif ? 'ACTIVE' : 'archivée' %></td>
+        <td><% if (!v.actif) { %>
+          <form method="post" action="/imports/edt/version/<%= v.id %>/activer">
+            <input type="hidden" name="motif" value="retour de version demandé">
+            <button class="petit secondaire">Réactiver</button></form>
+        <% } %></td></tr>
+  <% } %>
+</table>
+<p class="note">Le retour à une version précédente ne modifie aucun rapport passé : les événements conservent leurs instantanés.</p>
+</div>
+<% } %>
+
+<% } else { %>
+<h2>Aperçu — <%= apercu.fichier %> (<%= apercu.donnees.length %> ligne(s) rapprochées)</h2>
+<% const bloquants = apercu.anomalies.filter(a => a.niveau === 'bloquant'); %>
+<% if (bloquants.length) { %>
+  <div class="bandeau b-erreur">⛔ <%= bloquants.length %> ligne(s) non rapprochée(s) ou invalide(s) : publication impossible.</div>
+<% } %>
+<% if (apercu.anomalies.length) { %>
+<div class="carte defiler"><table>
+  <tr><th>Ligne</th><th>Niveau</th><th>Anomalie</th></tr>
+  <% for (const a of apercu.anomalies) { %>
+    <tr><td><%= a.ligne || '—' %></td>
+        <td><span class="pastille <%= a.niveau === 'bloquant' ? 'p-erreur' : 'p-info' %>"><%= a.niveau %></span></td>
+        <td><%= a.message %></td></tr>
+  <% } %>
+</table></div>
+<% } %>
+<div class="carte defiler"><table>
+  <tr><th>Jour</th><th>Tranche</th><th>Classe</th><th>Enseignant</th><th>Matière</th><th>Jumelage</th></tr>
+  <% for (const d of apercu.donnees.slice(0, 200)) { %>
+    <tr><td><%= d.jour %></td><td>T<%= d.tranche %></td><td><%= d.classe %></td>
+        <td><%= d.enseignant %></td><td><%= d.matiere || '—' %></td><td><%= d.jumelage || '' %></td></tr>
+  <% } %>
+</table>
+<% if (apercu.donnees.length > 200) { %><p class="note">… et <%= apercu.donnees.length - 200 %> autres lignes.</p><% } %>
+</div>
+<% if (apercu.statut === 'apercu' && !bloquants.length) { %>
+<div class="carte">
+  <form method="post" action="/imports/edt/<%= apercu.id %>/publier">
+    <label>Date d'effet de cette version</label>
+    <input type="date" name="date_effet">
+    <p><button type="submit">Publier (nouvelle version active)</button>
+       <a class="bouton secondaire" href="/imports/edt">Annuler</a></p>
+  </form>
+</div>
+<% } %>
+<% } %>
+<%- include('partials/pied') %>

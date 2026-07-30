@@ -1,0 +1,65 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Rapports</h1>
+<% if (message) { %><div class="bandeau b-info"><%= message %></div><% } %>
+
+<form method="get" action="/rapports" class="carte ligne-form">
+  <div><label>Type</label>
+    <select name="type">
+      <option value="journalier" <%= rapport.type === 'journalier' ? 'selected' : '' %>>Journalier</option>
+      <option value="hebdomadaire" <%= rapport.type === 'hebdomadaire' ? 'selected' : '' %>>Hebdomadaire</option>
+      <option value="intermediaire" <%= rapport.type === 'intermediaire' ? 'selected' : '' %>>Intermédiaire (dates libres)</option>
+    </select></div>
+  <div><label>Du</label><input type="date" name="du" value="<%= rapport.du %>"></div>
+  <div><label>Au (intermédiaire)</label><input type="date" name="au" value="<%= rapport.au %>"></div>
+  <div><button class="secondaire">Afficher</button></div>
+</form>
+
+<div class="carte">
+  <p><strong>Période :</strong> du <%= rapport.duFr %> au <%= rapport.auFr %> ·
+     <strong>Généré :</strong> <%= rapport.generation %> (heure du Cameroun) ·
+     <strong>Rapports reçus :</strong> <%= rapport.nbTransmis %> secteur(s) sur <%= rapport.nbActifs %> actifs ·
+     <strong>Total :</strong> <%= rapport.totalHeures %> h</p>
+  <% if (!rapport.definitif) { %>
+    <div class="bandeau b-rappel">Rapport intermédiaire — NON DÉFINITIF : la période n'est pas encore verrouillée.</div>
+  <% } %>
+  <p>
+    <a class="bouton" href="/rapports/export.docx?type=<%= rapport.type %>&du=<%= rapport.du %>&au=<%= rapport.au %>">Exporter en Word (.docx)</a>
+    <form class="enligne" method="post" action="/rapports/envoyer">
+      <input type="hidden" name="type" value="<%= rapport.type %>">
+      <input type="hidden" name="du" value="<%= rapport.du %>">
+      <input type="hidden" name="au" value="<%= rapport.au %>">
+      <button type="submit" class="secondaire">Envoyer au proviseur par e-mail</button>
+    </form>
+  </p>
+</div>
+
+<h2>Rapport détaillé (<%= rapport.detail.length %> ligne(s))</h2>
+<div class="carte defiler">
+  <% if (!rapport.detail.length) { %><p class="note">Aucun événement soumis sur la période.</p><% } else { %>
+  <table>
+    <tr><th class="droite">N°</th><th>Date</th><th>Horaire</th><th>Nom de l'enseignant</th><th>Matricule</th>
+        <th>Classe</th><th>Matière</th><th>Type</th><th>Justification</th></tr>
+    <% for (const l of rapport.detail) { %>
+      <tr><td class="droite"><%= l.n %></td><td><%= l.date %></td><td><%= l.horaire %></td>
+          <td><%= l.enseignant %></td><td><%= l.matricule %></td><td><%= l.classe %></td>
+          <td><%= l.matiere %></td><td><%= l.type %></td><td><%= l.justification %></td></tr>
+    <% } %>
+  </table>
+  <p class="note">Les classes jumelées sont fusionnées en une seule ligne : aucune heure n'est comptée deux fois.</p>
+  <% } %>
+</div>
+
+<h2>Récapitulatif par enseignant</h2>
+<div class="carte defiler">
+  <p class="note">Seuls les enseignants totalisant au moins une heure d'absence apparaissent.</p>
+  <% if (!rapport.recap.length) { %><p class="note">Aucun enseignant à une heure d'absence ou plus.</p><% } else { %>
+  <table>
+    <tr><th class="droite">N°</th><th>Nom de l'enseignant</th><th>Matricule</th><th>Spécialité</th><th class="droite">Heures d'absence</th></tr>
+    <% for (const l of rapport.recap) { %>
+      <tr><td class="droite"><%= l.n %></td><td><%= l.enseignant %></td><td><%= l.matricule %></td>
+          <td><%= l.specialite %></td><td class="droite"><%= l.heures %></td></tr>
+    <% } %>
+  </table>
+  <% } %>
+</div>
+<%- include('partials/pied') %>

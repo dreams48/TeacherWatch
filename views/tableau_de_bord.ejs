@@ -1,0 +1,60 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Suivi du <%= dateFr %> <span class="note">(heure du Cameroun : <%= heure %>)</span></h1>
+
+<% if (rappel) { %>
+  <div class="bandeau b-rappel">⏰ Rappel : votre secteur n'a pas encore transmis son rapport du jour.
+    Verrouillage à 18 h. <a href="/saisie">Aller à la saisie</a></div>
+<% } %>
+
+<% if (!jourCours) { %>
+  <div class="bandeau b-info">Ce jour n'est pas un jour de cours au calendrier : aucun rappel ni verrouillage automatique.</div>
+<% } %>
+
+<% if (jour && jour.verrouillee) { %>
+  <div class="bandeau b-verrou">🔒 Journée verrouillée.
+    <% if (jour.classement === 'sans_cours_auto') { %> Classement automatique : <strong>Journée sans cours</strong>.<% } %>
+    <% if (jour.classement === 'sans_cours_corrige') { %> Classement : journée sans cours (corrigé).<% } %>
+    <% if (estDirection) { %>
+      <form class="enligne" method="post" action="/journees/<%= dateJour %>/classement">
+        <input type="hidden" name="classement" value="<%= jour.classement === 'avec_cours' ? 'sans_cours_corrige' : 'avec_cours' %>">
+        <input type="hidden" name="motif" value="correction depuis le tableau de bord">
+        <button class="petit secondaire">Corriger le classement</button>
+      </form>
+      <form class="enligne" method="post" action="/journees/<%= dateJour %>/deverrouiller">
+        <input type="hidden" name="motif" value="déverrouillage exceptionnel par la direction">
+        <button class="petit danger">Déverrouiller (exceptionnel)</button>
+      </form>
+    <% } %>
+  </div>
+<% } %>
+
+<h2>État des secteurs (<%= secteurs.filter(s => s.statut.startsWith('soumis')).length %> transmis / <%= secteurs.filter(s => s.statut !== 'non_concerne').length %> concernés)</h2>
+<div class="grille-secteurs">
+  <% for (const s of secteurs) { %>
+    <div class="tuile">
+      <div class="nom"><%= s.nom %></div>
+      <% if (s.statut === 'non_concerne') { %><span class="pastille p-neutre">Non concerné (pas de cours)</span>
+      <% } else if (s.statut === 'en_attente') { %><span class="pastille p-attente">En attente</span>
+      <% } else if (s.statut === 'non_soumis') { %><span class="pastille p-erreur">Non soumis</span>
+      <% } else if (s.statut === 'soumis_sans_absence') { %><span class="pastille p-ok">Soumis — aucune absence</span>
+      <% } else { %><span class="pastille p-ok">Soumis — avec événements</span><% } %>
+      <% if (s.nbSoumissions > 0) { %><div class="note"><%= s.nbSoumissions %> soumission(s)</div><% } %>
+    </div>
+  <% } %>
+</div>
+
+<form method="get" action="/" class="carte ligne-form">
+  <div><label>Consulter une autre journée</label><input type="date" name="date" value="<%= dateJour %>"></div>
+  <div><button type="submit" class="secondaire">Afficher</button></div>
+</form>
+
+<% if (notifications.length) { %>
+  <h2>Notifications</h2>
+  <% for (const n of notifications) { %>
+    <div class="carte" style="display:flex; gap:1rem; align-items:center;">
+      <div style="flex:1"><%= n.message %> <span class="note"><%= n.created_at %></span></div>
+      <form method="post" action="/notifications/<%= n.id %>/lu"><button class="petit secondaire">Marquer lu</button></form>
+    </div>
+  <% } %>
+<% } %>
+<%- include('partials/pied') %>

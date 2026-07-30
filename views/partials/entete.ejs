@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TeacherWatch — Lycée Technique de Douala Bassa</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="principal">
+  <div class="marque">TeacherWatch<small>Lycée Technique de Douala Bassa</small></div>
+  <% if (user) { %>
+  <nav class="principal">
+    <a href="/">Suivi du jour</a>
+    <% if (user.role === 'surveillant' || user.role === 'admin' || user.role === 'proviseur') { %>
+      <a href="/saisie">Saisie</a>
+      <a href="/edt">Emploi du temps</a>
+    <% } %>
+    <% if (user.role === 'admin' || user.role === 'proviseur') { %>
+      <a href="/rapports">Rapports</a>
+      <a href="/enseignants">Enseignants</a>
+      <a href="/imports/personnel">Import personnel</a>
+      <a href="/imports/edt">Import EDT</a>
+      <a href="/admin/utilisateurs">Utilisateurs</a>
+      <a href="/admin/parametres">Paramètres</a>
+      <a href="/admin/audit">Audit</a>
+      <a href="/admin/sauvegardes">Sauvegardes</a>
+    <% } %>
+  </nav>
+  <div class="qui">
+    <span><%= user.nom %> (<%= user.role %>)</span>
+    <form method="post" action="/deconnexion"><button class="petit secondaire">Se déconnecter</button></form>
+  </div>
+  <% } %>
+</header>
+<main>

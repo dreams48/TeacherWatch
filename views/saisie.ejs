@@ -1,0 +1,128 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Saisie des événements — <%= dateJour %></h1>
+
+<% if (erreur) { %><div class="bandeau b-erreur"><%= erreur %></div><% } %>
+<% if (verrouillee) { %><div class="bandeau b-verrou">🔒 Journée verrouillée : seule la direction peut encore intervenir.</div><% } %>
+<% if (!jourCours) { %><div class="bandeau b-info">Attention : ce jour n'est pas un jour de cours au calendrier.</div><% } %>
+
+<form method="get" action="/saisie" class="carte ligne-form">
+  <div><label>Date</label><input type="date" name="date" value="<%= dateJour %>"></div>
+  <% if (user.role !== 'surveillant') { %>
+    <div><label>Secteur</label>
+      <select name="secteur"><option value="">— choisir —</option>
+        <% for (const s of secteurs) { %>
+          <option value="<%= s.id %>" <%= String(secteurId) === String(s.id) ? 'selected' : '' %>><%= s.nom %></option>
+        <% } %>
+      </select></div>
+  <% } %>
+  <div><button class="secondaire">Afficher</button></div>
+</form>
+
+<% if (secteurId) { %>
+
+<h2>Nouvel événement</h2>
+<div class="carte">
+  <form method="post" action="/evenements" id="formEvt">
+    <input type="hidden" name="uuid" value="">
+    <input type="hidden" name="date_jour" value="<%= dateJour %>">
+    <input type="hidden" name="secteur_id" value="<%= secteurId %>">
+    <div class="ligne-form">
+      <div>
+        <label>Cours (depuis l'emploi du temps du jour)</label>
+        <select name="cours_id">
+          <option value="">— saisie manuelle —</option>
+          <% for (const c of cours) { %>
+            <option value="<%= c.id %>" <%= c.couvert ? 'disabled' : '' %>>
+              T<%= c.numero %> (<%= c.heure_debut %>–<%= c.heure_fin %>) · <%= c.classe %><%= c.groupe_jumelage ? ' [jumelée]' : '' %> · <%= c.enseignant %><%= c.matiere ? ' · ' + c.matiere : '' %><%= c.couvert ? ' — situation couverte (' + c.situation + ')' : '' %>
+            </option>
+          <% } %>
+        </select>
+        <p class="note">Un enseignant en mission ou en congé déclaré n'est pas proposé (situation couverte).</p>
+      </div>
+      <div>
+        <label>Type d'événement</label>
+        <select name="type" required>
+          <option value="absence">Absence</option>
+          <option value="retard">Retard</option>
+          <option value="depart_anticipe">Départ anticipé</option>
+        </select>
+      </div>
+      <div>
+        <label>Minutes (retard / départ, facultatif)</label>
+        <input name="minutes" type="number" min="1" max="55" placeholder="ex. 15">
+      </div>
+    </div>
+    <details style="margin:.6rem 0;">
+      <summary class="note">Saisie manuelle (si le cours n'apparaît pas dans la liste)</summary>
+      <div class="ligne-form">
+        <div><label>Tranche</label>
+          <select name="tranche_id"><option value="">—</option>
+            <% for (let i = 1; i <= 10; i++) { %><option value="<%= i %>">Tranche <%= i %></option><% } %>
+          </select></div>
+        <div><label>Enseignant (id interne, voir liste Enseignants)</label>
+          <input name="enseignant_id" type="number" placeholder="id"></div>
+        <div><label>Classe (libellé libre)</label><input name="classe_libre" placeholder="ex. F4 2e année"></div>
+        <div><label>Matière</label><input name="matiere"></div>
+      </div>
+    </details>
+    <div class="ligne-form">
+      <div><label>Motif / observation (facultatif)</label><input name="motif"></div>
+      <div><label style="font-weight:400;"><input type="checkbox" name="confirmer_doublon" value="1"> Confirmer malgré un doublon signalé</label></div>
+    </div>
+    <p><button type="submit" <%= verrouillee && user.role === 'surveillant' ? 'disabled' : '' %>>Enregistrer le brouillon</button>
+       <span class="note">Le brouillon reste modifiable jusqu'à la soumission.</span></p>
+  </form>
+</div>
+
+<h2>Brouillons non soumis (<%= brouillons.length %>)</h2>
+<div class="carte defiler">
+  <% if (!brouillons.length) { %><p class="note">Aucun brouillon.</p><% } else { %>
+  <table>
+    <tr><th>Tranche</th><th>Horaire</th><th>Enseignant</th><th>Classe</th><th>Type</th><th>Motif</th><th></th></tr>
+    <% for (const e of brouillons) { %>
+      <tr>
+        <td>T<%= e.numero %></td><td><%= e.snap_horaire %></td>
+        <td><%= e.snap_enseignant %> <span class="note"><%= e.snap_matricule || '' %></span></td>
+        <td><%= e.snap_classe %></td><td><%= TYPES_FR[e.type] %><%= e.minutes ? ' (' + e.minutes + ' min)' : '' %></td>
+        <td><%= e.motif || '—' %></td>
+        <td><form method="post" action="/evenements/<%= e.id %>/supprimer"><button class="petit danger">Supprimer</button></form></td>
+      </tr>
+    <% } %>
+  </table>
+  <% } %>
+  <form method="post" action="/soumissions" style="margin-top:1rem;">
+    <input type="hidden" name="uuid" value="">
+    <input type="hidden" name="date_jour" value="<%= dateJour %>">
+    <input type="hidden" name="secteur_id" value="<%= secteurId %>">
+    <% if (!brouillons.length) { %>
+      <label style="font-weight:400;"><input type="checkbox" name="confirmer_vide" value="1">
+        Je confirme : <strong>aucune absence signalée</strong> pour ce secteur aujourd'hui.</label>
+    <% } %>
+    <button type="submit" <%= verrouillee && user.role === 'surveillant' ? 'disabled' : '' %>>
+      Soumettre <%= brouillons.length ? '(' + brouillons.length + ' événement(s))' : '« aucune absence »' %></button>
+    <span class="note">Après soumission, les événements sont verrouillés : seule la direction peut les corriger.</span>
+  </form>
+</div>
+
+<h2>Soumissions de la journée (<%= soumissions.length %>)</h2>
+<div class="carte defiler">
+  <% if (!soumissions.length) { %><p class="note">Aucune soumission.</p><% } else { %>
+  <table>
+    <tr><th>N°</th><th>Type</th><th>Événements</th><th>Auteur</th><th>Horodatage (UTC)</th></tr>
+    <% for (const s of soumissions) { %>
+      <tr><td><%= s.numero %></td>
+          <td><%= s.type === 'aucune_absence' ? 'Aucune absence signalée' : 'Avec événements' %></td>
+          <td><%= s.nb %></td><td><%= s.auteur %></td><td><%= s.created_at %></td></tr>
+    <% } %>
+  </table>
+  <% } %>
+</div>
+
+<% } %>
+
+<script>
+// UUID d'idempotence généré côté client dès l'affichage : un double envoi du
+// même formulaire (reconnexion, double clic) ne crée jamais deux événements.
+document.querySelectorAll('input[name="uuid"]').forEach(el => { el.value = crypto.randomUUID(); });
+</script>
+<%- include('partials/pied') %>

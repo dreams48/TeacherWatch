@@ -1,0 +1,31 @@
+<%- include('partials/entete', { user: user }) %>
+<h1>Emploi du temps</h1>
+<% if (!version) { %>
+  <div class="bandeau b-info">Aucun emploi du temps publié. <% if (user.role !== 'surveillant') { %><a href="/imports/edt">Importer un emploi du temps</a><% } %></div>
+<% } else { %>
+  <p class="note">Version active : <%= version.libelle || ('n° ' + version.id) %> — date d'effet <%= version.date_effet %></p>
+  <form method="get" action="/edt" class="carte ligne-form">
+    <div><label>Vue</label>
+      <select name="vue">
+        <option value="classe" <%= vue === 'classe' ? 'selected' : '' %>>Par classe</option>
+        <option value="enseignant" <%= vue === 'enseignant' ? 'selected' : '' %>>Par enseignant</option>
+        <option value="jour" <%= vue === 'jour' ? 'selected' : '' %>>Par jour</option>
+        <option value="secteur" <%= vue === 'secteur' ? 'selected' : '' %>>Par secteur</option>
+      </select></div>
+    <div><label>Recherche (classe, enseignant, matière)</label><input name="q" value="<%= q %>"></div>
+    <div><button class="secondaire">Afficher</button></div>
+  </form>
+  <div class="carte defiler">
+    <table>
+      <tr><th>Jour</th><th>Tranche</th><th>Horaire</th><th>Classe</th><th>Secteur</th><th>Enseignant</th><th>Matricule</th><th>Matière</th><th>Jumelage</th></tr>
+      <% for (const l of lignes) { %>
+        <tr><td><%= JOURS_FR[l.jour_semaine] %></td><td>T<%= l.numero %></td>
+            <td><%= l.heure_debut %>–<%= l.heure_fin %></td><td><%= l.classe %></td>
+            <td><%= l.secteur || '—' %></td><td><%= l.enseignant %></td><td><%= l.matricule || '—' %></td>
+            <td><%= l.matiere || '—' %></td><td><%= l.groupe_jumelage || '' %></td></tr>
+      <% } %>
+    </table>
+    <p class="note"><%= lignes.length %> ligne(s).</p>
+  </div>
+<% } %>
+<%- include('partials/pied') %>
