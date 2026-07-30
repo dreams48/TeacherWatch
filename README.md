@@ -43,7 +43,16 @@ Règles clés implémentées :
 
 ## 2. Installation
 
-Prérequis : Node.js ≥ 18. Aucune base de données à installer (SQLite embarqué).
+Prérequis : Node.js **20 ou plus** (22 LTS conseillé). Aucune base de données à installer
+(SQLite est embarqué dans l'application).
+
+> **Important** — les commandes ci-dessous se tapent dans un **terminal**, pas dans Node.js.
+> Si votre fenêtre affiche « Welcome to Node.js » et une invite `>`, vous êtes dans l'interpréteur
+> JavaScript : `git` et `npm` y sont refusés. Fermez-le avec **Ctrl+D**, puis ouvrez :
+> - **Windows** : menu Démarrer → taper `powershell` → *Windows PowerShell*
+>   (n'ouvrez pas « Node.js », qui lance l'interpréteur) ;
+> - **macOS** : Applications → Utilitaires → *Terminal* ;
+> - **Linux** : votre terminal habituel.
 
 ```bash
 npm install
