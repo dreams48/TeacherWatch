@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#10243e">
+  <title>TeacherWatch — Lycée Technique de Douala Bassa</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="enhancements.css">
+</head>
+<body>
+  <div id="toast" class="toast" role="status"></div>
+
+  <section id="loginView" class="login-view">
+    <div class="login-hero">
+      <div class="brand brand-light"><span class="brand-mark">TW</span><span><b>TeacherWatch</b><small>School attendance intelligence</small></span></div>
+      <div class="hero-copy">
+        <span class="eyebrow">LYCÉE TECHNIQUE DE DOUALA BASSA</span>
+        <h1 data-i18n="heroTitle">Une vision claire de chaque heure de cours.</h1>
+        <p data-i18n="heroText">Centralisez les absences, contrôlez les cinq secteurs et préparez vos rapports sans ressaisie.</p>
+      </div>
+    </div>
+    <div class="login-panel">
+      <button class="lang-btn" data-action="toggle-lang">FR · EN</button>
+      <form id="loginForm" class="login-card">
+        <h2 data-i18n="welcome">Bienvenue</h2>
+        <p data-i18n="loginIntro">Connectez-vous avec le compte Google approuvé par le proviseur.</p>
+        <label>Compte de démonstration</label>
+        <select id="demoAccount" class="google-select">
+          <option value="principal">mvondomekaully@gmail.com — Proviseur</option>
+          <option value="admin">administrateur@teacherwatch.demo — Administrateur</option>
+          <option value="s1">surveillant1@teacherwatch.demo — Secteur 1</option>
+          <option value="s2">surveillant2@teacherwatch.demo — Secteur 2</option>
+          <option value="s3">surveillant3@teacherwatch.demo — Secteur 3</option>
+          <option value="s4">surveillant4@teacherwatch.demo — Secteur 4</option>
+          <option value="s5">surveillant5@teacherwatch.demo — Secteur 5</option>
+        </select>
+        <button id="googleLogin" class="btn google full" type="submit"><span class="google-g">G</span><span data-i18n="googleLogin">Continuer avec Google</span></button>
+        <p class="security-note">🔒 <span data-i18n="security">Seuls les comptes approuvés peuvent accéder à TeacherWatch.</span></p>
+      </form>
+    </div>
+  </section>
+
+  <div id="appView" class="app hidden">
+    <aside class="sidebar">
+      <div class="brand brand-light"><span class="brand-mark">TW</span><span><b>TeacherWatch</b><small>LT Douala Bassa</small></span></div>
+      <nav id="mainNav">
+        <span class="nav-caption" data-i18n="steering">Pilotage</span>
+        <button class="nav-item supervisor-only" data-page="entry"><i>＋</i><span data-i18n="entry">Saisie des absences</span></button>
+        <button class="nav-item active" data-page="dashboard"><i>▦</i><span data-i18n="dashboard">Tableau de bord</span></button>
+        <button class="nav-item" data-page="schedule"><i>▤</i><span data-i18n="schedule">Emploi du temps</span></button>
+        <button class="nav-item" data-page="events"><i>≡</i><span data-i18n="events">Événements</span></button>
+        <button class="nav-item" data-page="reports"><i>▤</i><span data-i18n="reports">Rapports</span></button>
+        <span class="nav-caption" data-i18n="administration">Administration</span>
+        <button class="nav-item principal-only" data-page="users"><i>♙</i><span data-i18n="users">Utilisateurs</span></button>
+        <button class="nav-item admin-only" data-page="teachers"><i>◉</i><span data-i18n="teachers">Enseignants</span></button>
+        <button class="nav-item admin-only" data-page="sectors"><i>⌂</i><span data-i18n="sectors">Secteurs & classes</span></button>
+        <button class="nav-item admin-only" data-page="imports"><i>⇧</i><span data-i18n="imports">Imports</span></button>
+        <button class="nav-item admin-only" data-page="audit"><i>⌁</i><span data-i18n="audit">Journal d’audit</span></button>
+      </nav>
+      <div class="sidebar-user"><span id="userAvatar" class="avatar">PR</span><span><b id="userName">Le Proviseur</b><small id="userRole">Super-administrateur</small></span></div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div class="topbar-left"><button id="menuToggle" class="icon-btn menu-btn">☰</button><h1 id="pageTitle">Tableau de bord</h1></div>
+        <div class="top-actions"><button class="lang-btn" data-action="toggle-lang">FR · EN</button><button class="icon-btn" title="Notifications">🔔</button><button class="btn primary" data-action="open-event">+ <span data-i18n="addEvent">Ajouter un événement</span></button><button class="btn ghost" data-action="logout">Déconnexion</button></div>
+      </header>
+      <div id="pageContent" class="page-content"></div>
+    </main>
+  </div>
+
+  <dialog id="eventDialog">
+    <form id="eventForm" method="dialog" class="dialog-card">
+      <div class="dialog-head"><div><span class="eyebrow">TEACHERWATCH</span><h2 id="eventDialogTitle">Nouvel événement</h2></div><button class="icon-btn" type="button" data-action="close-event" aria-label="Fermer">✕</button></div>
+      <input id="eventId" type="hidden">
+      <div class="form-grid">
+        <label>Date<input id="eventDate" type="date" required></label>
+        <label>Horaire<select id="eventTime" required></select></label>
+        <label>Classe<select id="eventClass" required></select></label>
+        <label>Matricule<input id="eventTeacherCode" readonly placeholder="Rempli automatiquement"></label>
+        <label class="wide">Enseignant
+          <input id="eventTeacher" list="teacherSuggestions" autocomplete="off" required placeholder="Cliquez ou saisissez le nom de l’enseignant">
+          <input id="eventTeacherId" type="hidden">
+          <datalist id="teacherSuggestions"></datalist>
+          <small id="eventScheduleHint" class="muted">Sélectionnez d’abord l’horaire et la classe.</small>
+        </label>
+        <label>Matière<input id="eventSubject" required></label>
+        <label>Type<select id="eventType"><option value="absence">Absence</option><option value="retard">Retard</option><option value="depart">Départ anticipé</option></select></label>
+        <label>Tranche<select id="eventBand"><option value="">Non applicable</option><option value="lt15">Moins de 15 min</option><option value="15to30">15 à 30 min</option><option value="gt30">Plus de 30 min</option></select></label>
+        <label class="admin-field">Statut<select id="eventStatus"><option value="pending">En attente</option><option value="justified">Justifié</option><option value="unjustified">Non justifié</option></select></label>
+        <label>Secteur<select id="eventSector"></select></label>
+        <label class="wide">Classes jumelées (facultatif)<input id="eventJointClasses" placeholder="Ex. F2, F3 EL"></label>
+        <label class="wide">Observation<textarea id="eventNote" rows="3"></textarea></label>
+      </div>
+      <div class="dialog-actions"><button class="btn ghost" type="button" data-action="close-event">Annuler</button><button class="btn primary" id="saveEvent" value="default">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="teacherDialog">
+    <form id="teacherForm" method="dialog" class="dialog-card small-dialog">
+      <div class="dialog-head"><h2 id="teacherDialogTitle">Ajouter un enseignant</h2><button class="icon-btn" value="cancel">✕</button></div>
+      <input id="teacherIdInput" type="hidden">
+      <div class="form-grid one-col">
+        <label>Nom et prénoms<input id="teacherNameInput" required></label>
+        <label>Matricule<input id="teacherCodeInput" required></label>
+        <label>Spécialité<input id="teacherSpecialtyInput" required></label>
+        <label>Numéro de téléphone<input id="teacherPhoneInput" placeholder="+237 6XX XXX XXX"></label>
+      </div>
+      <div class="dialog-actions"><button class="btn ghost" value="cancel">Annuler</button><button class="btn primary" id="saveTeacher" value="default">Ajouter</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="sectorDialog">
+    <form id="sectorForm" method="dialog" class="dialog-card small-dialog">
+      <div class="dialog-head"><div><span class="eyebrow">TEACHERWATCH</span><h2 id="sectorDialogTitle">Modifier le surveillant</h2></div><button class="icon-btn" value="cancel">✕</button></div>
+      <input id="sectorIdInput" type="hidden">
+      <div class="form-grid one-col">
+        <label>Nom et prénoms du surveillant<input id="sectorSupervisorInput" required></label>
+        <label>Adresse Gmail<input id="sectorEmailInput" type="email" required placeholder="surveillant@gmail.com"></label>
+      </div>
+      <div class="dialog-actions"><button class="btn ghost" value="cancel">Annuler</button><button class="btn primary" id="saveSector" value="default">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="userDialog">
+    <form id="userForm" method="dialog" class="dialog-card small-dialog">
+      <div class="dialog-head"><div><span class="eyebrow">TEACHERWATCH</span><h2 id="userDialogTitle">Ajouter un utilisateur</h2></div><button class="icon-btn" value="cancel">✕</button></div>
+      <input id="userKeyInput" type="hidden">
+      <div class="form-grid one-col">
+        <label>Nom et prénoms<input id="userNameInput" required></label>
+        <label>Adresse Gmail<input id="userEmailInput" type="email" required placeholder="utilisateur@gmail.com"></label>
+        <label>Numéro de téléphone<input id="userPhoneInput" placeholder="+237 6XX XXX XXX"></label>
+        <label>Rôle<select id="userRoleInput" required><option value="supervisor">Surveillant général</option><option value="admin">Administrateur</option></select></label>
+        <label id="userSectorLabel">Secteur<select id="userSectorInput"></select></label>
+      </div>
+      <div class="dialog-actions"><button class="btn ghost" value="cancel">Annuler</button><button class="btn primary" id="saveUser" value="default">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <input id="filePicker" type="file" accept=".xlsx,.xls,.csv" hidden>
+  <script src="teachers-data.js?v=16"></script>
+  <script src="schedule-data.js?v=16"></script>
+  <script src="app.js?v=16"></script>
+</body>
+</html>

@@ -127,8 +127,7 @@ router.get('/admin/parametres', (req, res) => {
     exceptions: db.prepare('SELECT * FROM jours_exceptions ORDER BY date_jour DESC LIMIT 40').all(),
     reglages: {
       jours_cours: getSetting('jours_cours', '1,2,3,4,5'),
-      compte_retard_heures: getSetting('compte_retard_heures', '0'),
-      compte_depart_heures: getSetting('compte_depart_heures', '0'),
+      compte_heures_reelles: getSetting('compte_heures_reelles', '0'),
       envoi_mode: getSetting('envoi_mode', 'consolide'),
     },
     message: req.query.m || null });
@@ -159,14 +158,14 @@ router.post('/admin/tranches/:id', (req, res) => {
 });
 
 router.post('/admin/reglages', (req, res) => {
-  const avant = { jours_cours: getSetting('jours_cours', ''), retard: getSetting('compte_retard_heures', '0') };
+  const avant = { jours_cours: getSetting('jours_cours', ''),
+                  heures_reelles: getSetting('compte_heures_reelles', '0') };
   if (req.body.jours_cours) {
     const jours = String(req.body.jours_cours).split(',').map(s => Number(s.trim()))
       .filter(n => n >= 1 && n <= 6);
     if (jours.length) setSetting('jours_cours', jours.join(','));
   }
-  setSetting('compte_retard_heures', req.body.compte_retard_heures === '1' ? '1' : '0');
-  setSetting('compte_depart_heures', req.body.compte_depart_heures === '1' ? '1' : '0');
+  setSetting('compte_heures_reelles', req.body.compte_heures_reelles === '1' ? '1' : '0');
   setSetting('envoi_mode', req.body.envoi_mode === 'chaque_soumission' ? 'chaque_soumission' : 'consolide');
   audit(req.user, 'modification_reglages', 'settings', null, avant, req.body, null, req);
   res.redirect('/admin/parametres?m=' + encodeURIComponent('Réglages enregistrés.'));

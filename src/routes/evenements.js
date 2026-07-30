@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const { db } = require('./../db');
 const { audit, nowDouala, jourSemaine, estJourCours, exigerConnexion, exigerRole, estDirection } = require('./../helpers');
 const { statutSecteurs } = require('./../services/scheduler');
-const { TYPES_FR, JUSTIF_FR } = require('./../services/rapport');
+const { TYPES_FR, JUSTIF_FR, DUREES_FR } = require('./../services/rapport');
 
 const router = express.Router();
 router.use(exigerConnexion);
@@ -43,9 +43,9 @@ function coursDuJour(dateISO, secteurId) {
 
 // Classes jumelées : dans les fichiers réels du lycée, le jumelage n'est pas
 // déclaré par une colonne — il se déduit du fait qu'un même enseignant tient
-// plusieurs classes sur la même tranche et le même jour. 37 % de ces
-// groupements sont à cheval sur plusieurs secteurs : la détection et le
-// contrôle des doublons doivent donc porter sur TOUS les secteurs.
+// plusieurs classes sur la même tranche et le même jour. Un groupement sur neuf
+// est à cheval sur deux secteurs : la détection et le contrôle des doublons
+// doivent donc porter sur TOUS les secteurs, pas seulement celui du surveillant.
 function groupeJumelage(dateISO, trancheId, enseignantId) {
   const version = db.prepare('SELECT id FROM edt_versions WHERE actif = 1').get();
   if (!version || !enseignantId) return [];
@@ -72,7 +72,7 @@ router.get('/saisie', (req, res) => {
   const secteurs = db.prepare('SELECT * FROM secteurs WHERE actif = 1').all();
   if (!secteurId) return res.render('saisie', { user: req.user, dateJour, secteurs, secteurId: null,
     cours: [], brouillons: [], soumissions: [], verrouillee: journeeVerrouillee(dateJour),
-    jourCours: estJourCours(dateJour), TYPES_FR, JUSTIF_FR, erreur: req.query.e || null });
+    jourCours: estJourCours(dateJour), TYPES_FR, JUSTIF_FR, DUREES_FR, erreur: req.query.e || null });
 
   if (!secteurAutorise(req, secteurId)) return res.status(403).render('erreur',
     { user: req.user, message: 'Vous ne pouvez pas saisir pour un autre secteur.' });
@@ -87,7 +87,7 @@ router.get('/saisie', (req, res) => {
 
   res.render('saisie', { user: req.user, dateJour, secteurs, secteurId, cours, brouillons,
     soumissions, verrouillee: journeeVerrouillee(dateJour), jourCours: estJourCours(dateJour),
-    TYPES_FR, JUSTIF_FR, erreur: req.query.e || null });
+    TYPES_FR, JUSTIF_FR, DUREES_FR, erreur: req.query.e || null });
 });
 
 // --- création d'un événement (brouillon) ----------------------------------
@@ -131,11 +131,19 @@ router.post('/evenements', (req, res) => {
              horaire: `${t.heure_debut}–${t.heure_fin}`, duree: t.duree_minutes, jumelage: null };
   }
 
+  // Retards et départs anticipés sont qualifiés par tranche de durée
+  // (convention du lycée) ; une absence n'a pas de durée à saisir.
+  const dureeBucket = b.type === 'absence' ? null
+    : (['lt15', '15to30', 'gt30'].includes(b.duree) ? b.duree : null);
+  if (b.type !== 'absence' && !dureeBucket)
+    return res.redirect(`/saisie?date=${dateJour}&secteur=${secteurId}&e=` +
+      encodeURIComponent('Indiquez la tranche de durée du retard ou du départ anticipé.'));
+
   // Sur un cours jumelé, l'événement porte le groupement complet et ne compte
   // qu'une heure : c'est ce qui empêche le double comptage (audit B-02).
   const groupe = groupeJumelage(dateJour, snap.tranche_id, snap.enseignant_id);
   if (groupe.length > 1) {
-    snap.classe = groupe.map(g => g.nom).join(' + ');
+    snap.classe = groupe.map(g => g.nom).join(' / ');
     snap.jumelage = snap.jumelage || 'auto:' + snap.tranche_id + ':' + snap.enseignant_id;
   }
 
@@ -161,7 +169,7 @@ router.post('/evenements', (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .run(uuid, b.type, dateJour, snap.tranche_id, snap.classe_id, snap.enseignant_id, secteurId,
          snap.enseignant, snap.matricule, snap.specialite, snap.classe, snap.matiere,
-         snap.horaire, snap.duree, snap.jumelage, b.minutes || null, b.motif || null, req.user.id);
+         snap.horaire, snap.duree, snap.jumelage, dureeBucket, b.motif || null, req.user.id);
   audit(req.user, 'creation_evenement', 'evenement', r.lastInsertRowid, null,
         { type: b.type, enseignant: snap.enseignant, date: dateJour }, null, req);
   res.redirect(`/saisie?date=${dateJour}&secteur=${secteurId}`);

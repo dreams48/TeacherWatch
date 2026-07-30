@@ -30,12 +30,10 @@ Après normalisation de la casse et correction de deux coquilles, l'emploi du te
 | T9 | 14h35 – 15h25 | 50 min |
 | T10 | 15h25 – 16h15 | 50 min |
 
-> **Point important.** Les tranches **ne sont pas toutes de même durée** : T6 dure une heure, les
-> neuf autres cinquante minutes. Une absence ne vaut donc pas toujours la même chose. La règle de
-> comptage doit être écrite en conséquence — l'application calcule aujourd'hui `durée de la tranche
-> ÷ 60`, ce qui donne 0,83 h pour une tranche ordinaire et 1 h pour T6. **À confirmer par le
-> proviseur :** faut-il compter en heures réelles, ou compter 1 « heure de cours » par tranche quelle
-> que soit sa durée ? Les deux sont défendables et donnent des totaux différents.
+> **Point important, désormais tranché.** Les tranches **ne sont pas toutes de même durée** : T6 dure
+> une heure, les neuf autres cinquante minutes. Votre prototype répond à la question : **une absence
+> vaut une heure**, quelle que soit la durée réelle de la tranche. L'application applique cette règle,
+> avec un réglage permettant de basculer en heures réelles si le proviseur le décide.
 
 ### 1.2 Situations administratives (question B-04)
 
@@ -61,10 +59,10 @@ La colonne **FONCTION OCCUPEE** donne l'organisation effective :
 | PROVISEUR | 1 |
 | INTENDANT, comptable, chefs de service | 5 |
 
-> **Deux constats.** D'abord, le cahier des charges parle de **cinq secteurs** mais le fichier ne
-> compte que **quatre surveillants de secteur** : soit un poste est vacant, soit un surveillant en
-> couvre deux, soit le découpage a changé. À trancher avant le pilote — c'est le socle du
-> cloisonnement.
+> **Deux constats.** D'abord, le cahier des charges parle de **cinq secteurs**, votre prototype en
+> définit bien cinq (avec cinq comptes de surveillant), mais le fichier du personnel ne compte que
+> **quatre surveillants de secteur** : soit un poste est vacant, soit un surveillant en couvre deux.
+> À trancher avant le pilote — c'est le socle du cloisonnement.
 > Ensuite, les trois rôles de l'application (proviseur, administrateur, surveillant) ne couvrent pas
 > une organisation qui compte 13 censeurs, 13 surveillants généraux et 8 chefs de travaux. La matrice
 > des droits doit dire lesquels ont besoin d'un accès, et lequel.
@@ -83,23 +81,23 @@ tient plusieurs classes sur la même tranche et le même jour.
 | Créneaux jumelés par semaine | **303** |
 | dont groupements de 2 classes | 300 |
 | dont groupements de 3 classes | 3 |
-| **dont à cheval sur plusieurs secteurs** | **113 (37 %)** |
+| **dont à cheval sur deux secteurs** | **32 (11 %)** |
 
-Exemples réels :
+Exemples réels, avec le découpage par niveau du prototype :
 
 | Jour · tranche | Enseignant | Classes | Secteurs concernés |
 |---|---|---|---|
-| Jeudi T1 | DJAM BAHEL Jean Marc | A1 GELB + A1 GMA | Génie Électrique \| Génie Mécanique |
-| Lundi T1 | NZODIA Ines | A1 GELA + A1 GMB | Génie Électrique \| Génie Mécanique |
-| Mercredi T6 | TATIAZEU TSAFACK Ariane G. | A1 GMA + A3 ELNI + A3 FRCL | Mécanique \| Électrique \| Civil |
+| Mercredi T6 | TATIAZEU TSAFACK Ariane G. | A1 GMA / A3 ELNI / A3 FRCL | Secteur 1 \| Secteur 2 |
+| Mardi T8 | KOUMDOUM YOUMBISSI Joël | A2 FRCL / A3 AICI | Secteur 1 \| Secteur 2 |
+| Vendredi T1 | FONDZENYUY Caroline | A2 MARE / 2NDE F7 | Secteur 1 \| Secteur 3 |
 
-> **Conséquence, et c'est la plus lourde de l'analyse.** Plus d'un tiers des cours jumelés concernent
-> deux secteurs différents. **Deux surveillants peuvent donc déclarer de bonne foi la même absence.**
+> **Conséquence.** Un cours jumelé sur neuf concerne deux secteurs différents.
+> **Deux surveillants peuvent donc déclarer de bonne foi la même absence.**
 > Sans garde-fou, le rapport la compterait deux fois — précisément l'anomalie que le cahier des
 > charges classe en priorité élevée.
 >
 > L'application a été corrigée en conséquence : une déclaration sur un cours jumelé enregistre le
-> **groupement complet** (« A1 GELB + A1 GMA »), compte **une seule heure**, et le contrôle des
+> **groupement complet** (« A2 FRCL / A3 AICI »), compte **une seule heure**, et le contrôle des
 > doublons porte sur **tous les secteurs** — pas seulement celui du surveillant qui saisit. Le
 > second surveillant voit que l'absence est déjà déclarée et par quel secteur.
 
@@ -185,7 +183,7 @@ Dans la feuille `PERSONNEL VACATAIRE`, la colonne MATRICULE contient littéralem
 Le matricule figurant dans les deux tableaux du rapport officiel, il faut décider : identifiant
 interne de remplacement, ou mention « vacataire » assumée dans le rapport ?
 
-### 2.8 Pas de colonne « Secteur »
+### 2.8 Pas de colonne « Secteur » — mais le prototype la fournit
 
 L'emploi du temps ne rattache pas les classes à un secteur. Les 74 classes ont été réparties par
 famille de filière, **à titre de proposition à valider** :
@@ -234,3 +232,95 @@ Par ordre d'importance :
 5. Cinq secteurs pour quatre surveillants : quel est le découpage réel et qui couvre quoi ?
 6. Quel rattachement officiel des 74 classes aux secteurs ?
 7. Les censeurs, surveillants généraux et chefs de travaux ont-ils besoin d'un accès, et lequel ?
+
+---
+
+## 5. Essai réel : import des deux fichiers dans l'application
+
+Les fichiers ont été importés **tels quels**, sans préparation, dans l'application. L'import du
+personnel lit désormais les feuilles multiples et trouve seul la ligne d'en-tête (la vôtre est en
+ligne 15, pas en ligne 1).
+
+### 5.1 Fichier du personnel
+
+| Résultat | Valeur |
+|---|---|
+| Feuilles lues | 3 — `FICHIER DU PERSONNEL`, `PERSONNEL VACATAIRE`, `PERSONNEL HORS DU PAYS` |
+| Personnes retenues | **386** |
+| Doublons inter-feuilles fusionnés | 10 (même personne sur deux feuilles) |
+| **Matricules réellement en conflit** | **2 — bloquants** |
+
+Les deux conflits sont de vraies erreurs à corriger dans le fichier : un même matricule porté par
+**deux personnes différentes**.
+
+| Matricule | Porté par |
+|---|---|
+| `1150093E` | PROMBOVE YONDNO Gertrude **et** TCHOUPOU LONTSI Cecile épse YEMTSA |
+| `1012722S` | GOGHO MOMO Blandine épse GUIMAZEU **et** SONGOUNG KOUKENG Ines |
+
+En revanche, EBODE Lucie Sandrine épse AKONO BITA et NGUIMBOUS-NGUIMBOUS MASSODA figurent à la fois
+dans la feuille principale et dans `PERSONNEL HORS DU PAYS` : ce n'est pas une erreur, l'application
+fusionne les deux lignes et retient la situation « hors du pays ».
+
+La feuille `PERSONNEL N'AYANT PAS PRIS SERVICE` n'est pas reprise : son en-tête n'est pas
+identifiable, et ces personnes n'ont de toute façon pas de service à suivre.
+
+### 5.2 Emploi du temps
+
+Importé dans son format d'origine (colonne `Heure` au format `07H30 – 08H20`, `Jour` en clair, sans
+colonne Secteur) :
+
+| Résultat | Valeur |
+|---|---:|
+| Lignes rapprochées | **3 507 / 3 695 (95 %)** |
+| Créneaux non pédagogiques conservés | 885 |
+| Horaires fautifs corrigés automatiquement | 10 |
+| Noms rapprochés de façon approchante (à vérifier) | 236 |
+| **Noms distincts restant à corriger** | **23** |
+| Noms ambigus (plusieurs candidats possibles) | 8 |
+| Cellules contenant plusieurs enseignants | 19 |
+
+**Les 23 noms à corriger** sont pour 15 d'entre eux un patronyme seul (`DJONGUE`, `KANA`, `NIPA`,
+`NGOMENI`, `NKEMALEU`, `NKZELEY`…), impossible à rattacher à une personne parmi 386. Trois d'entre eux
+méritent une mention particulière :
+
+```
+ENEYGUE   ENVEGUE   ENYEGUE
+```
+
+Trois orthographes différentes de ce qui est très probablement **la même personne**, sur des lignes
+différentes de l'emploi du temps.
+
+**Les 8 ambiguïtés** sont instructives : l'application refuse de deviner plutôt que de se tromper.
+
+| Libellé de l'emploi du temps | Candidats possibles |
+|---|---|
+| `ABESSOLO` | ABESSOLO Angelique Laurice · PANI Adelaïde épse ELONG ABESSOLO |
+| `ATANGANA` | ATANGANA Frédéric Paul · MEKON'NO OUAMBO Milly Annick épse ATANGANA |
+| `MEGNE` | MEGNE Jidith Marlyse épse NGOUAGNIA · MEGNE Bertrice épse YOUMBI |
+| `KAMDEM` | NJIKE Claire épse KAMDEM · FOTIE MESSA Diane épse KAMDEM TCHANGUI · … |
+
+Le patronyme apparaît tantôt comme nom de naissance, tantôt comme nom d'épouse : seul le matricule
+lève l'ambiguïté.
+
+**Les 19 cellules à plusieurs enseignants** portent des libellés de groupes d'atelier qui éclairent
+enfin leur logique :
+
+```
+BAYANG (MMCI1) / KEMFO (MMCI2)
+FOPA (RRV1) / SEUDIEU (RRV2)
+FOPA (TP MLMH1) / KEMFO (TP MLMH2)
+MEPOUOK(METRO), NGANKAM(FRAIS), ZEDONG(TOURN)
+```
+
+Ce sont des **travaux pratiques à groupes tournants** : chaque enseignant encadre un groupe numéroté
+d'une même classe, sur le même créneau. Ce n'est donc pas du co-encadrement d'un seul groupe, mais un
+dédoublement de la classe. La règle à écrire est alors : si l'un des enseignants manque, **son groupe**
+n'a pas cours, pas la classe entière.
+
+### 5.3 Ce qui reste à faire avant la mise en service
+
+Le chemin est court : **2 matricules** à départager, **23 noms** à compléter dans l'emploi du temps,
+**8 patronymes** à préciser ou à accompagner d'un matricule, et une décision sur les **19 créneaux à
+groupes tournants**. Cela fait 33 lignes à corriger sur 3 695 — un après-midi de travail, pas un
+chantier.

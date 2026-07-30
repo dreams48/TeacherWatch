@@ -2,3 +2,6 @@ node_modules/
 data/
 *.log
 .seed-demo.js
+demo/seed-demo.json
+docs/prototype/teachers-data.js
+docs/prototype/schedule-data.js

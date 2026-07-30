@@ -43,10 +43,12 @@
   <form method="post" action="/admin/reglages">
     <label>Jours de cours de la semaine (1=lundi … 6=samedi, séparés par des virgules)</label>
     <input name="jours_cours" value="<%= reglages.jours_cours %>">
-    <label style="font-weight:400;"><input type="checkbox" name="compte_retard_heures" value="1"
-      <%= reglages.compte_retard_heures === '1' ? 'checked' : '' %>> Compter les retards dans les heures d'absence (règle à valider par le proviseur)</label>
-    <label style="font-weight:400;"><input type="checkbox" name="compte_depart_heures" value="1"
-      <%= reglages.compte_depart_heures === '1' ? 'checked' : '' %>> Compter les départs anticipés dans les heures d'absence</label>
+    <p class="note">Règle en vigueur : <strong>une absence vaut une heure</strong>, quelle que soit la
+       durée de la tranche. Les absences justifiées restent à l'historique mais sont exclues des totaux.
+       Les retards et départs anticipés ne comptent aucune heure : ils sont suivis par tranche de durée.</p>
+    <label style="font-weight:400;"><input type="checkbox" name="compte_heures_reelles" value="1"
+      <%= reglages.compte_heures_reelles === '1' ? 'checked' : '' %>> Compter en <strong>heures réelles</strong>
+      au lieu d'une heure par tranche (la tranche de 11h55–12h55 vaut alors 1 h, les neuf autres 0,83 h)</label>
     <label>Envoi du rapport au proviseur</label>
     <select name="envoi_mode">
       <option value="consolide" <%= reglages.envoi_mode === 'consolide' ? 'selected' : '' %>>Consolidé (notification à chaque soumission, e-mail à la demande)</option>

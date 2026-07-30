@@ -48,8 +48,13 @@
         </select>
       </div>
       <div>
-        <label>Minutes (retard / départ, facultatif)</label>
-        <input name="minutes" type="number" min="1" max="55" placeholder="ex. 15">
+        <label>Durée constatée (retard ou départ anticipé)</label>
+        <select name="duree">
+          <option value="">— sans objet pour une absence —</option>
+          <option value="lt15">moins de 15 min</option>
+          <option value="15to30">15 à 30 min</option>
+          <option value="gt30">plus de 30 min</option>
+        </select>
       </div>
     </div>
     <details style="margin:.6rem 0;">
@@ -78,12 +83,13 @@
 <div class="carte defiler">
   <% if (!brouillons.length) { %><p class="note">Aucun brouillon.</p><% } else { %>
   <table>
-    <tr><th>Tranche</th><th>Horaire</th><th>Enseignant</th><th>Classe</th><th>Type</th><th>Motif</th><th></th></tr>
+    <tr><th>Tranche</th><th>Horaire</th><th>Enseignant</th><th>Classe</th><th>Type</th><th>Durée</th><th>Motif</th><th></th></tr>
     <% for (const e of brouillons) { %>
       <tr>
         <td>T<%= e.numero %></td><td><%= e.snap_horaire %></td>
         <td><%= e.snap_enseignant %> <span class="note"><%= e.snap_matricule || '' %></span></td>
-        <td><%= e.snap_classe %></td><td><%= TYPES_FR[e.type] %><%= e.minutes ? ' (' + e.minutes + ' min)' : '' %></td>
+        <td><%= e.snap_classe %></td><td><%= TYPES_FR[e.type] %></td>
+        <td><%= e.minutes ? (DUREES_FR[e.minutes] || e.minutes) : '—' %></td>
         <td><%= e.motif || '—' %></td>
         <td><form method="post" action="/evenements/<%= e.id %>/supprimer"><button class="petit danger">Supprimer</button></form></td>
       </tr>

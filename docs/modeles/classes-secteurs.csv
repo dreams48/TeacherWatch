@@ -1,0 +1,75 @@
+Classe,Secteur,Niveau
+"A1 GCHA",Secteur 1,A1 et A2
+"A1 GCHB",Secteur 1,A1 et A2
+"A1 GCI",Secteur 1,A1 et A2
+"A1 GELA",Secteur 1,A1 et A2
+"A1 GELB",Secteur 1,A1 et A2
+"A1 GMA",Secteur 1,A1 et A2
+"A1 GMB",Secteur 1,A1 et A2
+"A2 AIBC",Secteur 1,A1 et A2
+"A2 AICI",Secteur 1,A1 et A2
+"A2 ELME",Secteur 1,A1 et A2
+"A2 ELNI",Secteur 1,A1 et A2
+"A2 FRCL",Secteur 1,A1 et A2
+"A2 MACO",Secteur 1,A1 et A2
+"A2 MARE",Secteur 1,A1 et A2
+"A2 MEFA",Secteur 1,A1 et A2
+"A2 MEFE",Secteur 1,A1 et A2
+"A3 AIBC",Secteur 2,A3 et A4
+"A3 AICI",Secteur 2,A3 et A4
+"A3 ELME",Secteur 2,A3 et A4
+"A3 ELNI",Secteur 2,A3 et A4
+"A3 FRCL",Secteur 2,A3 et A4
+"A3 MACO",Secteur 2,A3 et A4
+"A3 MARE",Secteur 2,A3 et A4
+"A3 MEFA",Secteur 2,A3 et A4
+"A3 MEFE",Secteur 2,A3 et A4
+"A4 AIBC",Secteur 2,A3 et A4
+"A4 AICI",Secteur 2,A3 et A4
+"A4 ELME",Secteur 2,A3 et A4
+"A4 ELNI",Secteur 2,A3 et A4
+"A4 FRCL",Secteur 2,A3 et A4
+"A4 MACO",Secteur 2,A3 et A4
+"A4 MARE",Secteur 2,A3 et A4
+"A4 MEFA",Secteur 2,A3 et A4
+"A4 MEFE",Secteur 2,A3 et A4
+"2NDE CH/TI-A",Secteur 3,Secondes
+"2NDE CH/TI-B",Secteur 3,Secondes
+"2NDE CMA/MVT-A",Secteur 3,Secondes
+"2NDE CMA/MVT-B",Secteur 3,Secondes
+"2NDE F1",Secteur 3,Secondes
+"2NDE F3-A",Secteur 3,Secondes
+"2NDE F3-B",Secteur 3,Secondes
+"2NDE F4/BA-A",Secteur 3,Secondes
+"2NDE F4/BA-B",Secteur 3,Secondes
+"2NDE F6",Secteur 3,Secondes
+"2NDE F7",Secteur 3,Secondes
+"2NDE F8-A",Secteur 3,Secondes
+"2NDE F8-B",Secteur 3,Secondes
+"P CH/TI-A",Secteur 4,Premieres
+"P CH/TI-B",Secteur 4,Premieres
+"P CMA/MVT-A",Secteur 4,Premieres
+"P CMA/MVT-B",Secteur 4,Premieres
+"P F1",Secteur 4,Premieres
+"P F3-A",Secteur 4,Premieres
+"P F3-B",Secteur 4,Premieres
+"P F3-C",Secteur 4,Premieres
+"P F4/BA",Secteur 4,Premieres
+"P F6/BIPE",Secteur 4,Premieres
+"P F6/COPH",Secteur 4,Premieres
+"P F7/BIOLAP",Secteur 4,Premieres
+"P F7/BIOTECH",Secteur 4,Premieres
+"P F8-A",Secteur 4,Premieres
+"P F8-B",Secteur 4,Premieres
+"T CH/TI",Secteur 5,Terminales
+"T CMA/MVT-A",Secteur 5,Terminales
+"T CMA/MVT-B",Secteur 5,Terminales
+"T F1",Secteur 5,Terminales
+"T F3",Secteur 5,Terminales
+"T F4/BA",Secteur 5,Terminales
+"T F6/BIPE",Secteur 5,Terminales
+"T F6/COPH",Secteur 5,Terminales
+"T F7/BIOLAP",Secteur 5,Terminales
+"T F7/BIOTECH",Secteur 5,Terminales
+"T F8-A",Secteur 5,Terminales
+"T F8-B",Secteur 5,Terminales

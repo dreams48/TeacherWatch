@@ -31,8 +31,15 @@ Règles clés implémentées :
   horaire. Un réimport du personnel ou de l'emploi du temps **ne modifie jamais un rapport passé**.
 - **Idempotence** : chaque événement et chaque soumission porte un UUID généré côté client ;
   un double envoi (double clic, reconnexion) ne crée jamais de doublon.
-- **Classes jumelées** : une absence sur un cours jumelé = **une** ligne, **une** heure
-  (colonne Jumelage du fichier d'emploi du temps).
+- **Classes jumelées** : détectées automatiquement (même enseignant, même tranche, plusieurs
+  classes). Une absence sur un cours jumelé = **une** ligne et **une** heure pour l'enseignant,
+  tandis que **chaque classe** du groupement compte comme touchée. Un groupement sur neuf est à
+  cheval sur deux secteurs : le contrôle des doublons porte donc sur tous les secteurs, et le second
+  surveillant voit que l'absence est déjà déclarée et par quel secteur.
+- **Comptage** : une absence vaut **une heure**, quelle que soit la durée de la tranche. Les absences
+  **justifiées** restent à l'historique mais sont **exclues des totaux**. Les retards et départs
+  anticipés ne comptent aucune heure : ils sont qualifiés par tranche de durée (moins de 15 min,
+  15 à 30 min, plus de 30 min).
 - **Justification** : chaque événement porte un statut « à statuer / justifiée / non justifiée »
   (qualifié par la direction) ; un enseignant en situation couverte (mission, congé de maladie…)
   n'est pas proposé à la saisie sur la période déclarée.
@@ -61,8 +68,10 @@ npm start          # démarre sur http://localhost:3000
 
 Au premier démarrage, l'application crée :
 
-- les 5 secteurs (renommables dans Paramètres) ;
-- les 10 tranches horaires **provisoires** (à confirmer dans Paramètres — décision B-01 de l'audit) ;
+- les 5 secteurs (renommables dans Paramètres ; découpage par niveau du lycée :
+  A1-A2, A3-A4, Secondes, Premières, Terminales) ;
+- les **10 tranches horaires réelles** du lycée, relevées dans son emploi du temps
+  (neuf de 50 min, celle de 11h55–12h55 de 60 min) ;
 - le compte proviseur : `mvondomekaully@gmail.com` / `ChangezMoi2026!`
   (changement de mot de passe **obligatoire** à la première connexion).
 
@@ -78,12 +87,13 @@ Variables d'environnement (toutes facultatives) :
 
 ## 3. Mise en route au lycée (ordre conseillé)
 
-1. **Paramètres** : confirmer les 10 tranches horaires, les jours de cours de la semaine,
-   renommer les secteurs ; saisir les fériés et congés connus.
+1. **Paramètres** : vérifier les 10 tranches horaires et les jours de cours de la semaine ;
+   saisir les fériés et congés connus.
 2. **Import personnel** : téléverser le fichier Excel (modèle : [`docs/modeles/personnel.csv`](docs/modeles/personnel.csv)) ;
    vérifier l'aperçu et les anomalies ; publier.
-3. **Import emploi du temps** : modèle [`docs/modeles/emploi-du-temps.csv`](docs/modeles/emploi-du-temps.csv) —
-   une ligne par cours ; publier après rapprochement complet.
+3. **Import emploi du temps** : votre fichier peut être téléversé **tel quel**
+   (modèle : [`docs/modeles/emploi-du-temps.csv`](docs/modeles/emploi-du-temps.csv)) ;
+   publier après rapprochement complet des enseignants.
 4. **Utilisateurs** : créer les surveillants (un par secteur) et le(s) administrateur(s) ;
    communiquer les mots de passe initiaux de façon sûre.
 5. Chaque jour : les surveillants saisissent et soumettent **avant 18 h** ;
@@ -93,12 +103,30 @@ Variables d'environnement (toutes facultatives) :
 ## 4. Formats d'import
 
 **Personnel** (`.xlsx` ou `.csv`) — colonnes reconnues (Nom obligatoire) :
-`Matricule, Nom, Spécialité, Téléphone`
+`Matricule`, `Nom` (ou `Noms et prénoms`), `Spécialité` (ou `Discipline`),
+`Téléphone` (ou `Contact`), `Observation`.
 
-**Emploi du temps** — une ligne par cours :
-`Jour` (lundi…samedi ou 1…6), `Tranche` (1 à 10), `Classe`, `Secteur`,
-`Matricule` (ou `Enseignant`), `Matière`, `Jumelage` (même code sur les lignes
-des classes jumelées d'un même cours).
+Le fichier du lycée est accepté **tel quel** : l'application lit **toutes les
+feuilles** (titulaires, vacataires, personnel hors du pays) et trouve seule la
+ligne d'en-tête, où qu'elle se trouve. La colonne `Observation` alimente la
+situation administrative. Un matricule valant « vacataire » est traité comme
+absent. Une même personne présente sur deux feuilles est fusionnée ; seul un
+matricule porté par **deux personnes différentes** bloque la publication.
+
+**Emploi du temps** — une ligne par cours, au format du fichier du lycée :
+`Heure` (ex. `07H30 – 08H20`), `Classe`, `Jour` (Lundi…Vendredi), `Matière`,
+`Enseignant`. Les colonnes `Tranche`, `Secteur`, `Matricule` et `Jumelage` sont
+acceptées si elles existent, mais ne sont pas nécessaires :
+
+- l'heure est rapprochée des dix tranches officielles ; la casse et les deux
+  coquilles connues (`11H45 – 12H55`, `11H55 – 12H56`) sont corrigées et signalées ;
+- le secteur vient de la table classe → secteur
+  ([`docs/modeles/classes-secteurs.csv`](docs/modeles/classes-secteurs.csv)), ou du
+  préfixe de la classe (A1/A2, A3/A4, 2NDE, P, T) ;
+- les **classes jumelées sont détectées seules** : un même enseignant sur la même
+  tranche et le même jour dans plusieurs classes forme un groupement ;
+- une ligne **sans enseignant** (Bibliothèque, Pause, Orientation) est conservée
+  comme créneau non pédagogique et n'attend aucune déclaration d'absence.
 
 L'import se fait toujours en deux temps : **analyse avec aperçu et anomalies**, puis
 **publication atomique**. Anomalies bloquantes : matricule dupliqué, ligne sans identité,
@@ -109,9 +137,11 @@ d'un nouveau fichier sont **archivés**, jamais supprimés.
 
 L'application fonctionne avec des règles provisoires **paramétrables**, à confirmer :
 
-- **B-01** — horaires exacts des 10 tranches (Paramètres → Tranches) et comptage des retards /
-  départs anticipés dans les heures d'absence (Paramètres → Règles ; par défaut : non comptés) ;
-- **B-02** — définition des classes jumelées (colonne Jumelage de l'import) ;
+- **B-01** — les horaires des 10 tranches sont ceux du fichier réel ; reste à confirmer le comptage
+  en « une heure par tranche » (règle en vigueur, reprise du prototype) ou en heures réelles
+  (Paramètres → Règles) ;
+- **secteurs** — le découpage par niveau (A1-A2, A3-A4, Secondes, Premières, Terminales) est repris du
+  prototype : à confirmer, ainsi que le rattachement des surveillants (4 postes pour 5 secteurs) ;
 - **B-03** — calendrier des jours de cours (Paramètres → Calendrier) ;
 - **B-06** — mode d'envoi des rapports (par défaut : consolidé, e-mail à la demande) ;
 - **G-02** — créer les comptes de production (hébergement, domaine, SMTP) au nom d'une adresse

@@ -1,0 +1,35 @@
+.google-select {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.btn.google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fff;
+  color: #263238;
+  border-color: #cfd8dc;
+}
+
+.google-g {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(135deg,#4285f4 0 48%,#34a853 48% 66%,#fbbc05 66% 82%,#ea4335 82%);
+  font-weight: 900;
+}
+
+.muted { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.attestation { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 11px; background: #f8fafb; font-size: 12px; line-height: 1.5; }
+.attestation input { margin-top: 3px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.form-grid input:disabled, .form-grid select:disabled { background: #eef2f4; color: #667783; }
+.supervisor-name { margin: 5px 0 4px; color: var(--navy); font-size: 17px; line-height: 1.25; }

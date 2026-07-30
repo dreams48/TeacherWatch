@@ -18,7 +18,7 @@
   <p><strong>Période :</strong> du <%= rapport.duFr %> au <%= rapport.auFr %> ·
      <strong>Généré :</strong> <%= rapport.generation %> (heure du Cameroun) ·
      <strong>Rapports reçus :</strong> <%= rapport.nbTransmis %> secteur(s) sur <%= rapport.nbActifs %> actifs ·
-     <strong>Total :</strong> <%= rapport.totalHeures %> h</p>
+     <strong>Heures comptées :</strong> <%= rapport.totalHeures %> h · <strong>Classes touchées :</strong> <%= rapport.clsTouchees %></p>
   <% if (!rapport.definitif) { %>
     <div class="bandeau b-rappel">Rapport intermédiaire — NON DÉFINITIF : la période n'est pas encore verrouillée.</div>
   <% } %>
@@ -38,20 +38,25 @@
   <% if (!rapport.detail.length) { %><p class="note">Aucun événement soumis sur la période.</p><% } else { %>
   <table>
     <tr><th class="droite">N°</th><th>Date</th><th>Horaire</th><th>Nom de l'enseignant</th><th>Matricule</th>
-        <th>Classe</th><th>Matière</th><th>Type</th><th>Justification</th></tr>
+        <th>Classe</th><th>Matière</th><th>Type</th><th>Durée</th><th>Justification</th></tr>
     <% for (const l of rapport.detail) { %>
       <tr><td class="droite"><%= l.n %></td><td><%= l.date %></td><td><%= l.horaire %></td>
           <td><%= l.enseignant %></td><td><%= l.matricule %></td><td><%= l.classe %></td>
-          <td><%= l.matiere %></td><td><%= l.type %></td><td><%= l.justification %></td></tr>
+          <td><%= l.matiere %></td><td><%= l.type %></td><td><%= l.duree || '—' %></td>
+          <td><%= l.justification %></td></tr>
     <% } %>
   </table>
-  <p class="note">Les classes jumelées sont fusionnées en une seule ligne : aucune heure n'est comptée deux fois.</p>
+  <p class="note">Une absence vaut une heure, quelle que soit la durée de la tranche. Les absences
+     justifiées restent à l'historique mais sont <strong>exclues des totaux</strong>. Les retards et
+     départs anticipés sont suivis par tranche de durée et ne comptent pas d'heure.<br>
+     Les classes jumelées sont fusionnées en une seule ligne : l'enseignant ne se voit imputer qu'une
+     heure, tandis que chaque classe du groupement compte comme touchée.</p>
   <% } %>
 </div>
 
 <h2>Récapitulatif par enseignant</h2>
 <div class="carte defiler">
-  <p class="note">Seuls les enseignants totalisant au moins une heure d'absence apparaissent.</p>
+  <p class="note">Seuls les enseignants totalisant au moins une heure d'absence non justifiée apparaissent.</p>
   <% if (!rapport.recap.length) { %><p class="note">Aucun enseignant à une heure d'absence ou plus.</p><% } else { %>
   <table>
     <tr><th class="droite">N°</th><th>Nom de l'enseignant</th><th>Matricule</th><th>Spécialité</th><th class="droite">Heures d'absence</th></tr>
