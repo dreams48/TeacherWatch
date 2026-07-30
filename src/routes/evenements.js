@@ -41,6 +41,21 @@ function coursDuJour(dateISO, secteurId) {
     ORDER BY t.numero, c.nom`).all(secteurId, version.id, jourSemaine(dateISO));
 }
 
+// Classes jumelées : dans les fichiers réels du lycée, le jumelage n'est pas
+// déclaré par une colonne — il se déduit du fait qu'un même enseignant tient
+// plusieurs classes sur la même tranche et le même jour. 37 % de ces
+// groupements sont à cheval sur plusieurs secteurs : la détection et le
+// contrôle des doublons doivent donc porter sur TOUS les secteurs.
+function groupeJumelage(dateISO, trancheId, enseignantId) {
+  const version = db.prepare('SELECT id FROM edt_versions WHERE actif = 1').get();
+  if (!version || !enseignantId) return [];
+  return db.prepare(`
+    SELECT DISTINCT c.nom, c.secteur_id FROM emploi_du_temps e
+    JOIN classes c ON c.id = e.classe_id
+    WHERE e.version_id = ? AND e.jour_semaine = ? AND e.tranche_id = ? AND e.enseignant_id = ?
+    ORDER BY c.nom`).all(version.id, jourSemaine(dateISO), trancheId, enseignantId);
+}
+
 // enseignant couvert par une situation administrative ? (audit B-04)
 function situationCouvre(c, dateISO) {
   if (!c.situation || c.situation === 'en_poste') return false;
@@ -116,13 +131,28 @@ router.post('/evenements', (req, res) => {
              horaire: `${t.heure_debut}–${t.heure_fin}`, duree: t.duree_minutes, jumelage: null };
   }
 
-  // contrôle des doublons : même enseignant, même tranche, même jour, même type
-  const doublon = db.prepare(`SELECT id FROM evenements WHERE date_jour = ? AND tranche_id = ?
-    AND type = ? AND (enseignant_id = ? OR snap_enseignant = ?)`)
-    .get(dateJour, snap.tranche_id, b.type, snap.enseignant_id, snap.enseignant);
-  if (doublon && b.confirmer_doublon !== '1')
+  // Sur un cours jumelé, l'événement porte le groupement complet et ne compte
+  // qu'une heure : c'est ce qui empêche le double comptage (audit B-02).
+  const groupe = groupeJumelage(dateJour, snap.tranche_id, snap.enseignant_id);
+  if (groupe.length > 1) {
+    snap.classe = groupe.map(g => g.nom).join(' + ');
+    snap.jumelage = snap.jumelage || 'auto:' + snap.tranche_id + ':' + snap.enseignant_id;
+  }
+
+  // Contrôle des doublons, tous secteurs confondus : un enseignant n'a qu'un
+  // seul événement par tranche, quel que soit le secteur qui l'a déclaré.
+  const doublon = db.prepare(`SELECT e.id, e.type, e.secteur_id, s.nom AS secteur
+    FROM evenements e LEFT JOIN secteurs s ON s.id = e.secteur_id
+    WHERE e.date_jour = ? AND e.tranche_id = ?
+      AND (e.enseignant_id = ? OR e.snap_enseignant = ?)`)
+    .get(dateJour, snap.tranche_id, snap.enseignant_id, snap.enseignant);
+  if (doublon && b.confirmer_doublon !== '1') {
+    const ailleurs = doublon.secteur_id && Number(doublon.secteur_id) !== Number(secteurId)
+      ? ` Elle a été déclarée par le secteur « ${doublon.secteur} » : ce cours est à cheval sur plusieurs secteurs et ne doit être compté qu'une fois.` : '';
     return res.redirect(`/saisie?date=${dateJour}&secteur=${secteurId}&e=` +
-      encodeURIComponent(`Doublon possible : un ${TYPES_FR[b.type].toLowerCase()} existe déjà pour ${snap.enseignant} sur cette tranche. Cochez « confirmer malgré le doublon » pour forcer.`));
+      encodeURIComponent(`Doublon : ${snap.enseignant} a déjà un ${TYPES_FR[doublon.type].toLowerCase()} enregistré sur cette tranche.${ailleurs}`
+        + (ailleurs ? '' : ' Cochez « confirmer malgré le doublon » pour forcer.')));
+  }
 
   const r = db.prepare(`INSERT INTO evenements
     (uuid, type, date_jour, tranche_id, classe_id, enseignant_id, secteur_id,

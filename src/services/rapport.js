@@ -15,19 +15,22 @@ function evenementsPeriode(du, au) {
     WHERE e.statut = 'soumis' AND e.date_jour BETWEEN ? AND ?
     ORDER BY e.date_jour, t.numero, e.snap_enseignant`).all(du, au);
 
-  const vus = new Map(); // clé de jumelage → ligne fusionnée
+  // La clé ne dépend pas de la colonne groupe_jumelage : dans les fichiers du
+  // lycée le jumelage est implicite (même enseignant, même tranche, plusieurs
+  // classes). Deux événements sur la même tranche pour le même enseignant sont
+  // donc fusionnés quelle que soit leur provenance — y compris quand deux
+  // secteurs différents ont déclaré la même absence.
+  const vus = new Map();
   const lignes = [];
   for (const e of rows) {
-    if (e.groupe_jumelage) {
-      const cle = `${e.date_jour}|${e.tranche_id}|${e.enseignant_id || e.snap_matricule || e.snap_enseignant}|${e.groupe_jumelage}|${e.type}`;
-      const deja = vus.get(cle);
-      if (deja) { // fusion : concatène la classe, ne recompte pas les heures
-        if (!deja.snap_classe.includes(e.snap_classe))
-          deja.snap_classe += ' + ' + e.snap_classe;
-        continue;
-      }
-      vus.set(cle, e);
+    const cle = `${e.date_jour}|${e.tranche_id}|${e.enseignant_id || e.snap_matricule || e.snap_enseignant}|${e.type}`;
+    const deja = vus.get(cle);
+    if (deja) { // fusion : complète le libellé de classe, ne recompte pas les heures
+      for (const cl of String(e.snap_classe).split(' + '))
+        if (!deja.snap_classe.split(' + ').includes(cl)) deja.snap_classe += ' + ' + cl;
+      continue;
     }
+    vus.set(cle, e);
     lignes.push(e);
   }
   return lignes;
