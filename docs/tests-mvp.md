@@ -18,3 +18,16 @@ indésactivable ; révocation de session ; sauvegarde manuelle ; journal d'audit
 
 Dernière exécution : 38 OK, 0 échec (plus vérification manuelle du jumelage :
 une ligne « F4-1B + F4-1C », 0,92 h comptée une fois).
+
+
+---
+
+## Tests de la démonstration
+
+`docs/tests-demo.js` (Playwright, 21 vérifications) couvre l'écran **Comptes et surveillants** et le
+sélecteur de rôle : noms réels issus du fichier du personnel, secteur sans titulaire signalé, création
+d'un compte à l'état « Invité », protection du compte principal, motif obligatoire pour suspendre,
+restrictions de l'administrateur délégué (ni création d'administrateur, ni action sur le compte du
+proviseur, ni transfert), traçabilité à l'audit, et absence de débordement horizontal sur mobile.
+
+Exécution : `npm install --no-save playwright` puis `node docs/tests-demo.js`.

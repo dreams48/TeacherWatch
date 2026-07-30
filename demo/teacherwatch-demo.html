@@ -193,26 +193,53 @@ const TYPES = {absence:'Absence', retard:'Retard', depart:'Départ anticipé'};
 const DUREES = {lt15:'moins de 15 min', '15to30':'15 à 30 min', gt30:'plus de 30 min'};
 
 /* ---------- état de la démonstration ---------- */
-const CLE = 'tw-demo-v2';
+const CLE = 'tw-demo-v3';
 let E = charger();
 function charger(){
-  try { const b = JSON.parse(localStorage.getItem(CLE)); if (b && b.v === 2) return b; } catch(e){}
-  return {v:2, evts:[], soums:[], jours:{}, audit:[], gen:{}, role:'prov', jour:defautJour(), vue:'suivi'};
+  try { const b = JSON.parse(localStorage.getItem(CLE)); if (b && b.v === 3) return b; } catch(e){}
+  const users = comptesInitiaux();
+  return {v:3, users, evts:[], soums:[], jours:{}, audit:[], gen:{},
+          role: users[0].id, jour:defautJour(), vue:'suivi'};
 }
 function garder(){ try{ localStorage.setItem(CLE, JSON.stringify(E)); }catch(e){} }
 function defautJour(){ const d = new Date().getDay(); return (d>=1 && d<=5) ? d-1 : 0; }
 
-/* ---------- rôles (issus du fichier du personnel) ---------- */
-const prov = S.encadrement.find(p=>p.fonction==='PROVISEUR');
-const cens = S.encadrement.find(p=>p.fonction==='CENSEUR');
-const ROLES = [
-  {id:'prov', nom: prov ? prov.nom : 'Proviseur', lib:'Proviseur', type:'direction', sect:null},
-  {id:'admin', nom: cens ? cens.nom : 'Censeur', lib:'Censeur (administrateur)', type:'direction', sect:null},
-  ...S.secteurs.map((s,i)=>({id:'surv'+i, nom:s, lib:'Surveillant de secteur', type:'surv', sect:i})),
-];
-const role = () => ROLES.find(r=>r.id===E.role) || ROLES[0];
-const direction = () => role().type==='direction';
-const monSect = () => role().sect;
+/* ---------- comptes (Lot 2), amorcés depuis le fichier du personnel ---------- */
+const LIB_ROLE = {proviseur:'Proviseur', admin:'Administrateur délégué', surveillant:'Surveillant de secteur'};
+const LIB_STATUT = {invite:'Invité', actif:'Actif', suspendu:'Suspendu', archive:'Archivé'};
+
+// Adresse de démonstration dérivée du nom (le lycée saisira les vraies).
+// Déclarée en `function` et non en `const` : elle est appelée par
+// comptesInitiaux() au tout premier chargement de l'état, avant cette ligne.
+function mailDe(nom){
+  return String(nom).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z ]/g,' ').trim().split(/\s+/).filter(Boolean).slice(0,2).join('.') + '@ltdb.cm';
+}
+
+function comptesInitiaux(){
+  const parFonction = f => S.encadrement.filter(p=>p.fonction===f);
+  const prov = parFonction('PROVISEUR')[0];
+  const censeurs = parFonction('CENSEUR');
+  const surveillants = parFonction('SURVEILLANT DE SECTEUR');
+  let n = 1; const u = [];
+  u.push({id:'u'+n++, nom: prov?prov.nom:'Proviseur', email: prov?mailDe(prov.nom):'proviseur@ltdb.cm',
+          role:'proviseur', sect:null, statut:'actif', principal:true});
+  if (censeurs[0]) u.push({id:'u'+n++, nom:censeurs[0].nom, email:mailDe(censeurs[0].nom),
+          role:'admin', sect:null, statut:'actif', principal:false});
+  // les quatre surveillants de secteur du fichier, pour les quatre premiers
+  // secteurs : le cinquième reste sans titulaire, comme dans le fichier réel.
+  surveillants.slice(0, S.secteurs.length).forEach((p,i)=>{
+    u.push({id:'u'+n++, nom:p.nom, email:mailDe(p.nom), role:'surveillant', sect:i,
+            statut:'actif', principal:false});
+  });
+  return u;
+}
+
+const moi = () => E.users.find(u=>u.id===E.role) || E.users[0];
+const direction = () => ['proviseur','admin'].includes(moi().role);
+const estProviseur = () => moi().role === 'proviseur';
+const monSect = () => moi().sect;
+const survDe = si => E.users.find(u=>u.role==='surveillant' && u.sect===si && u.statut!=='archive');
 
 /* ---------- accès aux données ---------- */
 const clsSect = i => S.classes[i].s;
@@ -256,7 +283,7 @@ function etatSecteur(j, si){
 
 /* ---------- audit ---------- */
 function tracer(action, objet, avant, apres, motif){
-  E.audit.unshift({t:new Date().toISOString(), qui:role().nom, r:role().lib, action, objet,
+  E.audit.unshift({t:new Date().toISOString(), qui:moi().nom, r:LIB_ROLE[moi().role], action, objet,
                    avant:avant||null, apres:apres||null, motif:motif||null});
   if (E.audit.length>400) E.audit.length=400;
 }
@@ -318,7 +345,9 @@ function vueSuivi(){
         const e = etats[i], mine = i===moi;
         return '<div class="tuile s-'+e.code+'">'
           + '<div class="tnom">'+esc(s)+(mine?' <span class="jum">mon secteur</span>':'')+'</div>'
-          + '<div class="tinfo">'+esc(S.niveaux?S.niveaux[i]:'')+'</div>'
+          + '<div class="tinfo">'+esc(S.niveaux?S.niveaux[i]:'')
+          + (survDe(i) ? ' · '+esc(survDe(i).nom.split(' ').slice(0,2).join(' '))
+             : ' · <strong style="color:var(--brique)">aucun surveillant</strong>')+'</div>'
           + '<span class="pastille p-'+(e.code==='hors'?'hors':e.code==='ok'?'ok':e.code==='attente'?'attente':'non')+'">'+esc(e.lib)+'</span>'
           + '<div class="tinfo">'+esc(e.detail)+'</div></div>';
       }).join('')
@@ -591,6 +620,93 @@ function vuePersonnel(){
   return html;
 }
 
+/* ---------- vue : comptes et surveillants (Lot 2) ---------- */
+function vueUtilisateurs(){
+  const jeSuisProviseur = estProviseur();
+  const sansSurv = S.secteurs.map((n,i)=>({n,i})).filter(x=>!survDe(x.i));
+  let html = '<div class="entete-vue"><h1>Comptes et surveillants</h1>'
+    + '<p>'+E.users.filter(u=>u.statut!=='archive').length+' compte(s) actif(s) ou invité(s)</p></div>';
+
+  if (sansSurv.length)
+    html += '<div class="avis a-rappel"><strong>'
+      + (sansSurv.length===1 ? 'Un secteur est sans surveillant' : sansSurv.length+' secteurs sont sans surveillant')
+      + ' : '+sansSurv.map(x=>esc(x.n)).join(', ')+'.</strong> '
+      + 'Le fichier du personnel ne compte que quatre surveillants de secteur pour cinq secteurs. '
+      + 'Tant qu’un secteur n’a pas de titulaire, personne ne peut y saisir : nommez quelqu’un ci-dessous '
+      + 'ou confiez-lui un second secteur.</div>';
+
+  // --- création d'un compte
+  html += '<section class="carte"><h2>Créer un compte</h2>'
+    + '<p class="legende">Le compte est créé à l’état <strong>Invité</strong>. Dans l’application '
+    + 'installée, une invitation part par e-mail et le compte devient <strong>Actif</strong> à la '
+    + 'première connexion réussie — le proviseur en est notifié.</p>'
+    + '<form id="f-user"><div class="rangee">'
+    + '<div style="flex:1 1 15rem"><label for="u-nom">Nom et prénoms</label>'
+    + '<input id="u-nom" type="text" style="width:100%" placeholder="ex. MBALLA Jean Pierre" required></div>'
+    + '<div style="flex:1 1 13rem"><label for="u-mail">Adresse e-mail</label>'
+    + '<input id="u-mail" type="text" style="width:100%" placeholder="prenom.nom@ltdb.cm"></div>'
+    + '<div><label for="u-role">Rôle</label><select id="u-role">'
+    + '<option value="surveillant">Surveillant de secteur</option>'
+    + (jeSuisProviseur ? '<option value="admin">Administrateur délégué</option>' : '')
+    + '</select></div>'
+    + '<div><label for="u-sect">Secteur</label><select id="u-sect">'
+    + S.secteurs.map((n,i)=>'<option value="'+i+'"'+(!survDe(i)?' selected':'')+'>'+esc(n)
+      + (survDe(i)?' (déjà pourvu)':' — vacant')+'</option>').join('')
+    + '</select></div>'
+    + '<div><button class="act" id="u-creer">Créer et inviter</button></div>'
+    + '</div></form>'
+    + (jeSuisProviseur ? '' : '<p class="legende">Seul le proviseur peut créer un administrateur délégué : '
+       + 'l’option ne vous est pas proposée.</p>')
+    + '</section>';
+
+  // --- liste des comptes
+  const voirArchives = !!E.voirArchives;
+  const liste = E.users.filter(u=>voirArchives ? true : u.statut!=='archive');
+  html += '<section class="carte"><h2>Comptes</h2>'
+    + '<div class="rangee"><button class="sec mini" data-act="bascule-archives">'
+    + (voirArchives ? 'Masquer les comptes archivés' : 'Afficher aussi les comptes archivés')+'</button></div>'
+    + '<div class="defile"><table><thead><tr><th>Nom</th><th>Adresse</th><th>Rôle</th>'
+    + '<th>Secteur</th><th>Statut</th><th>Actions</th></tr></thead><tbody>';
+  liste.forEach(u=>{
+    const jeModifie = u.role==='admin' || u.role==='proviseur' ? jeSuisProviseur : true;
+    html += '<tr><td>'+esc(u.nom)+(u.principal?' <span class="jum">compte principal</span>':'')+'</td>'
+      + '<td class="mat">'+esc(u.email)+'</td><td>'+esc(LIB_ROLE[u.role])+'</td>'
+      + '<td>'+(u.sect!=null?esc(S.secteurs[u.sect]):'—')+'</td>'
+      + '<td><span class="pastille p-'+(u.statut==='actif'?'ok':u.statut==='invite'?'info':u.statut==='suspendu'?'attente':'hors')+'">'
+      + esc(LIB_STATUT[u.statut])+'</span></td><td>';
+    if (u.principal)
+      html += '<span class="legende">Protégé : ne peut être ni désactivé ni supprimé.</span>';
+    else if (!jeModifie)
+      html += '<span class="legende">Réservé au proviseur.</span>';
+    else {
+      if (u.statut !== 'suspendu') html += '<button class="sec mini" data-statut="'+u.id+'|suspendu">Suspendre</button> ';
+      if (u.statut === 'suspendu' || u.statut === 'archive') html += '<button class="sec mini" data-statut="'+u.id+'|actif">Réactiver</button> ';
+      if (u.statut !== 'archive') html += '<button class="mini danger" data-statut="'+u.id+'|archive">Retirer</button> ';
+      html += '<button class="sec mini" data-mdp="'+u.id+'">Réinitialiser le mot de passe</button>';
+    }
+    html += '</td></tr>';
+  });
+  html += '</tbody></table></div>'
+    + '<p class="legende">« Retirer » <strong>archive</strong> le compte : il ne peut plus se connecter, '
+    + 'mais son nom reste attaché aux soumissions qu’il a faites. Rien n’est jamais supprimé — '
+    + 'l’historique des rapports doit rester lisible.</p></section>';
+
+  // --- transfert du compte principal
+  if (jeSuisProviseur && moi().principal)
+    html += '<section class="carte"><h2>Transférer le compte principal à un successeur</h2>'
+      + '<p class="legende">Réservé au proviseur en exercice. L’ancien compte est archivé, ses sessions '
+      + 'révoquées, et l’opération est inscrite au journal d’audit.</p>'
+      + '<form id="f-transfert"><div class="rangee">'
+      + '<div style="flex:1 1 15rem"><label for="t-nom">Nom du successeur</label>'
+      + '<input id="t-nom" type="text" style="width:100%" required></div>'
+      + '<div style="flex:1 1 13rem"><label for="t-mail">Adresse e-mail</label>'
+      + '<input id="t-mail" type="text" style="width:100%"></div>'
+      + '<div><button class="act danger" id="t-ok">Transférer</button></div>'
+      + '</div></form></section>';
+
+  return html;
+}
+
 /* ---------- vue : audit ---------- */
 function vueAudit(){
   let html = '<div class="entete-vue"><h1>Journal d’audit</h1><p>'+E.audit.length+' entrée(s)</p></div>'
@@ -629,7 +745,12 @@ function vueApropos(){
   + '<li>Les <strong>situations administratives</strong> réellement présentes dans votre fichier (congé de '
   + 'maternité, stage, hors du pays) excluent l’enseignant de la saisie.</li>'
   + '<li>Le <strong>verrouillage</strong>, le classement « journée sans cours », les corrections motivées '
-  + 'et le <strong>journal d’audit</strong>.</li></ul></section>'
+  + 'et le <strong>journal d’audit</strong>.</li>'
+  + '<li>La <strong>gestion des comptes</strong> : le proviseur crée et retire des surveillants et des '
+  + 'administrateurs délégués, suspend, réactive, réinitialise un mot de passe et transfère son compte '
+  + 'principal à son successeur. Les comptes sont amorcés avec le proviseur, un censeur et les '
+  + '<strong>quatre surveillants de secteur</strong> de votre fichier du personnel — le cinquième '
+  + 'secteur apparaît sans titulaire, comme dans la réalité.</li></ul></section>'
   + '<section class="carte"><h2>Ce que seule l’application installée fait</h2>'
   + '<ul style="margin:0;padding-left:1.2rem;font-size:.92rem;line-height:1.7">'
   + '<li>La <strong>vraie connexion</strong> : ici le sélecteur de rôle remplace l’authentification. '
@@ -650,6 +771,7 @@ const VUES = [
   {id:'saisie', lib:'Saisie', f:vueSaisie},
   {id:'edt', lib:'Emploi du temps', f:vueEdt},
   {id:'rapports', lib:'Rapports', f:vueRapports, direction:true},
+  {id:'utilisateurs', lib:'Comptes et surveillants', f:vueUtilisateurs, direction:true},
   {id:'personnel', lib:'Personnel', f:vuePersonnel, direction:true},
   {id:'audit', lib:'Journal d’audit', f:vueAudit, direction:true},
   {id:'apropos', lib:'À propos', f:vueApropos},
@@ -658,8 +780,13 @@ const VUES = [
 function dessiner(){
   // rôles
   const sr = $('#sel-role');
-  if (!sr.options.length)
-    sr.innerHTML = ROLES.map(r=>'<option value="'+r.id+'">'+esc(r.lib)+' — '+esc(r.nom.length>34?r.nom.slice(0,32)+'…':r.nom)+'</option>').join('');
+  const dispoU = E.users.filter(u=>u.statut==='actif' || u.statut==='invite');
+  if (!dispoU.some(u=>u.id===E.role)) E.role = dispoU.length ? dispoU[0].id : E.users[0].id;
+  sr.innerHTML = dispoU.map(u=>{
+    const court = u.nom.length>30 ? u.nom.slice(0,28)+'…' : u.nom;
+    const suffixe = u.role==='surveillant' && u.sect!=null ? ' · '+S.secteurs[u.sect] : '';
+    return '<option value="'+u.id+'">'+esc(court)+' — '+esc(LIB_ROLE[u.role])+esc(suffixe)+'</option>';
+  }).join('');
   sr.value = E.role;
   // onglets accessibles
   const dispo = VUES.filter(v=>!v.direction || direction());
@@ -743,7 +870,7 @@ function soumettre(){
     const num = E.soums.filter(x=>x.j===j && x.s===si).length + 1;
     const sid = 's'+Date.now();
     br.forEach(x=>x.soum = sid);
-    E.soums.push({id:sid, j, s:si, num, n:br.length, qui:role().nom, t:new Date().toISOString()});
+    E.soums.push({id:sid, j, s:si, num, n:br.length, qui:moi().nom, t:new Date().toISOString()});
     tracer('soumission', S.secteurs[si]+' · '+S.jours[j]+' · n° '+num, null,
       br.length ? br.length+' événement(s)' : 'aucune absence signalée', null);
     $('#dlg').close(); dessiner();
@@ -813,6 +940,101 @@ function motifPuis(titre, action){
     const m = document.getElementById('m-motif').value.trim();
     if (!m){ document.getElementById('m-motif').focus(); return; }
     action(m); $('#dlg').close(); dessiner();
+  };
+}
+
+/* ---------- actions sur les comptes ---------- */
+function creerCompte(){
+  const nom = (document.getElementById('u-nom').value||'').trim();
+  const mail = (document.getElementById('u-mail').value||'').trim();
+  const role = document.getElementById('u-role').value;
+  const sect = Number(document.getElementById('u-sect').value);
+  if (!nom){ document.getElementById('u-nom').focus(); return; }
+  if (role === 'admin' && !estProviseur()){
+    dialogue('Action réservée', '<div class="avis a-refus">Seul le proviseur peut créer un '
+      + 'administrateur délégué.</div>', '<button class="act">Fermer</button>');
+    return;
+  }
+  const email = mail || mailDe(nom);
+  if (E.users.some(u=>u.email.toLowerCase()===email.toLowerCase() && u.statut!=='archive')){
+    dialogue('Adresse déjà utilisée', '<div class="avis a-refus">Un compte actif porte déjà l’adresse '
+      + esc(email)+'.</div>', '<button class="act">Fermer</button>');
+    return;
+  }
+  const u = {id:'u'+Date.now().toString(36), nom, email, role,
+             sect: role==='surveillant' ? sect : null, statut:'invite', principal:false};
+  E.users.push(u);
+  tracer('creation_compte', nom+' · '+LIB_ROLE[role]+(u.sect!=null?' · '+S.secteurs[u.sect]:''),
+         null, 'invité', null);
+  dessiner();
+  dialogue('Compte créé', '<div class="avis a-info"><strong>'+esc(nom)+'</strong> — '
+    + esc(LIB_ROLE[role])+(u.sect!=null?' du '+esc(S.secteurs[u.sect]):'')+'.<br>'
+    + 'Adresse : <span class="mat">'+esc(email)+'</span><br><br>'
+    + 'État : <strong>Invité</strong>. Dans l’application installée, l’invitation part par e-mail avec un '
+    + 'mot de passe initial ; le compte devient actif à la première connexion et le proviseur en est '
+    + 'notifié.<br><br>Vous pouvez dès maintenant choisir ce compte dans « Connecté comme » pour voir '
+    + 'ce qu’il voit.</div>', '<button class="act">Fermer</button>');
+}
+
+function changerStatut(id, statut){
+  const u = E.users.find(x=>x.id===id); if (!u) return;
+  if (u.principal){
+    dialogue('Compte protégé', '<div class="avis a-refus">Le compte principal du proviseur ne peut être '
+      + 'ni suspendu, ni retiré. C’est une protection voulue par le cahier des charges : personne ne peut '
+      + 'priver le lycée de son accès.</div>', '<button class="act">Fermer</button>');
+    return;
+  }
+  if ((u.role==='admin' || u.role==='proviseur') && !estProviseur()){
+    dialogue('Action réservée', '<div class="avis a-refus">Seul le proviseur peut modifier le statut d’un '
+      + 'administrateur délégué.</div>', '<button class="act">Fermer</button>');
+    return;
+  }
+  const suite = motif => {
+    const avant = LIB_STATUT[u.statut];
+    u.statut = statut;
+    tracer('changement_statut_compte', u.nom, avant, LIB_STATUT[statut], motif || null);
+    // celui qui se retire lui-même repasse sur le compte principal
+    if (E.role === u.id && statut !== 'actif' && statut !== 'invite')
+      E.role = E.users.find(x=>x.principal).id;
+    dessiner();
+  };
+  if (statut === 'actif') { suite(null); return; }
+  motifPuis(statut==='archive' ? 'Retirer « '+u.nom+' »' : 'Suspendre « '+u.nom+' »', suite);
+}
+
+function reinitMdp(id){
+  const u = E.users.find(x=>x.id===id); if (!u) return;
+  const mdp = Math.random().toString(36).slice(2,10);
+  tracer('reinitialisation_mot_de_passe', u.nom, null, 'nouveau mot de passe initial', null);
+  garder();
+  dialogue('Mot de passe réinitialisé', '<div class="avis a-info">Nouveau mot de passe initial pour '
+    + '<strong>'+esc(u.nom)+'</strong> :<br><span class="mono" style="font-size:1.15rem">'+esc(mdp)+'</span>'
+    + '<br><br>À communiquer de vive voix ou par un canal sûr. L’intéressé devra le changer à sa '
+    + 'première connexion. L’opération est inscrite au journal d’audit — mais jamais le mot de passe '
+    + 'lui-même.</div>', '<button class="act">Fermer</button>');
+}
+
+function transfererCompte(){
+  const nom = (document.getElementById('t-nom').value||'').trim();
+  const mail = (document.getElementById('t-mail').value||'').trim() || (nom ? mailDe(nom) : '');
+  if (!nom){ document.getElementById('t-nom').focus(); return; }
+  dialogue('Confirmer le transfert', '<p style="margin:0;font-size:.92rem">Le compte principal passera à '
+    + '<strong>'+esc(nom)+'</strong> ('+esc(mail)+').<br><br>Votre propre compte sera <strong>archivé</strong> '
+    + 'et vos sessions révoquées. Cette opération ne se défait pas.</p>',
+    '<button class="sec" value="non">Annuler</button><button class="act danger" id="t-conf">Transférer</button>');
+  document.getElementById('t-conf').onclick = e => {
+    e.preventDefault();
+    const ancien = moi();
+    ancien.principal = false; ancien.statut = 'archive';
+    const nouveau = {id:'u'+Date.now().toString(36), nom, email:mail, role:'proviseur',
+                     sect:null, statut:'actif', principal:true};
+    E.users.push(nouveau);
+    E.role = nouveau.id;
+    tracer('transfert_compte_principal', nouveau.nom, ancien.nom, nouveau.nom, 'succession');
+    $('#dlg').close(); dessiner();
+    dialogue('Compte principal transféré', '<div class="avis a-info">Le compte principal appartient '
+      + 'désormais à <strong>'+esc(nom)+'</strong>. Votre ancien compte est archivé : son nom reste '
+      + 'attaché à tout ce qu’il a validé.</div>', '<button class="act">Fermer</button>');
   };
 }
 
@@ -891,6 +1113,10 @@ document.addEventListener('click', e => {
     dessiner(); return;
   }
   if (b.dataset.corr){ corriger(b.dataset.corr); return; }
+  if (b.id==='u-creer'){ e.preventDefault(); creerCompte(); return; }
+  if (b.dataset.statut){ const [id,st]=b.dataset.statut.split('|'); changerStatut(id,st); return; }
+  if (b.dataset.mdp){ reinitMdp(b.dataset.mdp); return; }
+  if (b.id==='t-ok'){ e.preventDefault(); transfererCompte(); return; }
   const a = b.dataset.act;
   if (a==='soumettre') soumettre();
   else if (a==='verrouiller') verrouiller();
@@ -904,6 +1130,7 @@ document.addEventListener('click', e => {
     tracer('correction_classement_journee', S.jours[E.jour],
       av.classement==='sans_cours'?'journée sans cours':'journée avec cours',
       nv==='sans_cours'?'journée sans cours':'journée avec cours', m); });
+  else if (a==='bascule-archives'){ E.voirArchives = !E.voirArchives; dessiner(); }
   else if (a==='reset'){
     dialogue('Réinitialiser', '<p style="margin:0;font-size:.92rem">Toutes les saisies d’essai, soumissions '
       + 'et traces d’audit de cette démonstration seront effacées. Les fichiers d’origine du lycée ne '
